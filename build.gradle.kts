@@ -17,6 +17,8 @@ dependencies {
     testImplementation("org.slf4j:slf4j-api:2.0.17")
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    implementation("com.formdev:flatlaf:3.6.1")
 }
 
 tasks.test {
