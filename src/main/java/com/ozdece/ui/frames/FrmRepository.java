@@ -1,6 +1,9 @@
-package com.ozdece;
+package com.ozdece.ui.frames;
 
+import com.ozdece.github.auth.model.GithubUser;
 import com.ozdece.github.repository.GithubRepository;
+import com.ozdece.image.ImageService;
+import com.ozdece.ui.SwingScheduler;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,19 +13,26 @@ public class FrmRepository extends JFrame {
     private static final int FRAME_WIDTH = 600;
     private static final int FRAME_HEIGHT = 600;
 
-    private static final String TITLE = "Gheasy";
-
     private final JList<GithubRepository> lstGithubRepository = new JList<>();
+
+    private final JLabel lblLoggedInUser = new JLabel();
 
     private final JButton btnRemoveRepoFromList = new JButton("Remove Repository From List");
     private final JButton btnBrowseRepo = new JButton("Browse");
-    private final JButton btnLoginGh = new JButton("Login gh via Web");
 
     private final Dimension screenDimension = Toolkit.getDefaultToolkit().getScreenSize();
 
-    public FrmRepository() {
-        super(TITLE);
+    private final GithubUser githubUser;
+
+    public FrmRepository(ImageService imageService, GithubUser githubUser) {
+        super("Gheasy | " + githubUser.username());
+        this.githubUser = githubUser;
+
         setupFrame();
+
+        imageService.saveGitHubAvatar(githubUser.avatarUrl())
+                .publishOn(SwingScheduler.edt())
+                .subscribe(maybeImageIcon -> maybeImageIcon.ifPresent(lblLoggedInUser::setIcon));
     }
 
     private void setupFrame() {
@@ -57,13 +67,17 @@ public class FrmRepository extends JFrame {
 
         final JPanel tbBottomBar = new JPanel();
 
-        final JLabel lblLoggedInUser = new JLabel("No user logged in");
-        lblLoggedInUser.setFont(lblLoggedInUser.getFont().deriveFont(18f));
+        final String loggedInUserText = githubUser.fullName()
+                .map(fullName -> String.format("%s (%s)", fullName, githubUser.username()))
+                .orElse(githubUser.username());
+
+
+        lblLoggedInUser.setText(loggedInUserText);
+        lblLoggedInUser.setFont(lblLoggedInUser.getFont().deriveFont(16f));
 
         tbBottomBar.setLayout(new FlowLayout(FlowLayout.CENTER));
 
         tbBottomBar.add(lblLoggedInUser);
-        tbBottomBar.add(btnLoginGh);
 
         final JLabel lblRepositories = new JLabel("Repositories");
         lblRepositories.setFont(lblRepositories.getFont().deriveFont(Font.BOLD));
@@ -128,7 +142,7 @@ public class FrmRepository extends JFrame {
                         .addComponent(pnlActionButtons, 30, 30, 30)
                         .addGap(10)
                         .addComponent(tbBottomBar, 30, 30, 30)
-                        .addGap(5)
+                        .addGap(8)
         );
 
         centralPanel.setLayout(groupLayout);
