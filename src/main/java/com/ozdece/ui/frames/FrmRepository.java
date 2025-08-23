@@ -1,5 +1,6 @@
 package com.ozdece.ui.frames;
 
+import com.ozdece.GheasyApplication;
 import com.ozdece.github.auth.model.GithubUser;
 import com.ozdece.github.repository.GithubRepository;
 import com.ozdece.image.ImageService;
@@ -57,8 +58,7 @@ public class FrmRepository extends JFrame {
         lblGheasy.setFont(lblGheasy.getFont().deriveFont(24f).deriveFont(Font.BOLD));
 
         final JLabel lblVersion = new JLabel("Version: ");
-        // TODO: Read the version from a config file
-        final JLabel lblVersionNumber = new JLabel("0.1.0");
+        final JLabel lblVersionNumber = new JLabel(GheasyApplication.VERSION);
 
         final Font versionFont = lblVersion.getFont().deriveFont(14f);
 

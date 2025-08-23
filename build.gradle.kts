@@ -32,6 +32,15 @@ dependencies {
     implementation("io.vavr:vavr:0.10.7")
 }
 
+tasks.jar {
+    manifest {
+        attributes(
+            "Implementation-Title" to project.name,
+            "Implementation-Version" to version
+        )
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
     testLogging {

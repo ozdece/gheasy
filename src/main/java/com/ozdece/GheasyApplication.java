@@ -15,10 +15,12 @@ import io.vavr.control.Either;
 
 import javax.swing.*;
 import java.io.File;
+import java.util.Optional;
 
 public class GheasyApplication {
 
     public static final String CONFIG_FOLDER_PATH = System.getProperty("user.home") + "/.gheasy";
+    public static final String VERSION = Optional.ofNullable(GheasyApplication.class.getPackage().getImplementationVersion()).orElse("<unknown>");
 
     private static final ProcessService processService = new ProcessServiceImpl();
     private static final GhAuthService ghAuthService = new GhAuthServiceImpl(processService);
@@ -29,7 +31,6 @@ public class GheasyApplication {
     public static void main(String[] args) {
         //Set up the theme
         FlatDarkLaf.setup();
-
         final File configFolder = new File(CONFIG_FOLDER_PATH);
 
         if (!configFolder.exists()) {
