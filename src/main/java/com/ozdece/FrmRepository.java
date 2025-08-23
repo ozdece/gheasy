@@ -16,6 +16,7 @@ public class FrmRepository extends JFrame {
 
     private final JButton btnRemoveRepoFromList = new JButton("Remove Repository From List");
     private final JButton btnBrowseRepo = new JButton("Browse");
+    private final JButton btnLoginGh = new JButton("Login gh via Web");
 
     private final Dimension screenDimension = Toolkit.getDefaultToolkit().getScreenSize();
 
@@ -54,29 +55,15 @@ public class FrmRepository extends JFrame {
         lblVersionNumber.setFont(versionFont);
         lblVersion.setFont(versionFont);
 
-        final JToolBar tbBottomBar = new JToolBar();
-        tbBottomBar.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        final JPanel tbBottomBar = new JPanel();
 
-        final GroupLayout bottomBarLayout = new GroupLayout(tbBottomBar);
+        final JLabel lblLoggedInUser = new JLabel("No user logged in");
+        lblLoggedInUser.setFont(lblLoggedInUser.getFont().deriveFont(18f));
 
-        final JLabel lblLoggedInUser = new JLabel("Logged In User: ozdece");
+        tbBottomBar.setLayout(new FlowLayout(FlowLayout.CENTER));
 
-        bottomBarLayout.setHorizontalGroup(
-                bottomBarLayout.createParallelGroup()
-                        .addGroup(
-                                bottomBarLayout.createSequentialGroup()
-                                        .addGap(7)
-                                        .addComponent(lblLoggedInUser)
-                        )
-        );
-
-        bottomBarLayout.setVerticalGroup(
-                bottomBarLayout.createSequentialGroup()
-                        .addGap(4)
-                        .addComponent(lblLoggedInUser)
-        );
-
-        tbBottomBar.setLayout(bottomBarLayout);
+        tbBottomBar.add(lblLoggedInUser);
+        tbBottomBar.add(btnLoginGh);
 
         final JLabel lblRepositories = new JLabel("Repositories");
         lblRepositories.setFont(lblRepositories.getFont().deriveFont(Font.BOLD));
@@ -141,6 +128,7 @@ public class FrmRepository extends JFrame {
                         .addComponent(pnlActionButtons, 30, 30, 30)
                         .addGap(10)
                         .addComponent(tbBottomBar, 30, 30, 30)
+                        .addGap(5)
         );
 
         centralPanel.setLayout(groupLayout);
