@@ -11,8 +11,6 @@ import java.util.Optional;
 
 public class ImageServiceImpl implements ImageService {
 
-    // ffmpeg -i "https://example.com/image.png" -vf "scale=30:30" output.png
-
     private final ProcessService processService;
 
     //TODO: Read this from a config file
@@ -38,13 +36,9 @@ public class ImageServiceImpl implements ImageService {
                     );
                     final ProcessBuilder processBuilder = new ProcessBuilder(ffmpegDownloadCommand);
 
-                    return processService.getProcessExitCode(processBuilder)
-                            .toJavaOptional();
+                    return processService.getProcessExitCode(processBuilder);
                 })
-                .map(maybeSuccessfulOp ->
-                        maybeSuccessfulOp
-                                .filter(exitCode -> exitCode == 0)
-                                .map(exitCode -> new ImageIcon(GITHUB_AVATAR_PATH)));
+                .map(exitCode -> exitCode == 0 ? Optional.of(new ImageIcon(GITHUB_AVATAR_PATH)) : Optional.empty());
     }
 
 }

@@ -5,13 +5,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.ozdece.github.auth.GhAuthService;
 import com.ozdece.github.auth.logic.GhAuthServiceImpl;
-import com.ozdece.github.auth.model.GithubUser;
+import com.ozdece.github.repository.GithubRepositoryService;
+import com.ozdece.github.repository.logic.GithubRepositoryServiceImpl;
 import com.ozdece.image.ImageService;
 import com.ozdece.image.logic.ImageServiceImpl;
 import com.ozdece.process.ProcessService;
 import com.ozdece.process.ProcessServiceImpl;
 import com.ozdece.ui.frames.FrmRepository;
-import io.vavr.control.Either;
+
+import static io.vavr.API.Try;
 
 import javax.swing.*;
 import java.io.File;
@@ -25,6 +27,7 @@ public class GheasyApplication {
     private static final ProcessService processService = new ProcessServiceImpl();
     private static final GhAuthService ghAuthService = new GhAuthServiceImpl(processService);
     private static final ImageService imageService = new ImageServiceImpl(processService);
+    private static final GithubRepositoryService githubRepositoryService = new GithubRepositoryServiceImpl(processService);
 
     private static final ImmutableSet<String> MANDATORY_APPS_TO_BE_PRESENT = ImmutableSet.of("git", "gh");
 
@@ -37,20 +40,21 @@ public class GheasyApplication {
             if (configFolder.mkdir()){
               //TODO: Replace this with logging
               System.out.printf("Gheasy config folder is created at %s%n", CONFIG_FOLDER_PATH);
-            }else {
+            } else {
                System.err.println("An error occurred while creating the config folder of Gheasy. Exiting....");
                System.exit(-5);
             }
         }
 
-
         MANDATORY_APPS_TO_BE_PRESENT.forEach(app -> {
                     //TODO: Check programs for each operating system
                     final ProcessBuilder commandCheckProcessBuilder = new ProcessBuilder(ImmutableList.of("which", app));
 
-                    Either<Throwable, Integer> maybeCommandPresent = processService.getProcessExitCode(commandCheckProcessBuilder);
+                    final Integer commandExitCode = Try(() -> processService.getProcessExitCode(commandCheckProcessBuilder))
+                            // It's okay to give non-zero number here as we'll accept only zero return codes
+                            .getOrElse(-1);
 
-                    if (maybeCommandPresent.isLeft() || maybeCommandPresent.get() != 0) {
+                    if (commandExitCode != 0) {
                         JOptionPane.showMessageDialog(null,
                                 String.format("%s seems not to be installed on your computer. Make sure that %s is installed and %s executable is accessible through shell.", app, app, app),
                                 "Gheasy | Error",
@@ -60,24 +64,18 @@ public class GheasyApplication {
                 }});
 
         ghAuthService.getLoggedInUser()
-                .subscribe(maybeGithubUser -> {
-
-                    if (maybeGithubUser.isPresent()) {
-                        final GithubUser githubUser = maybeGithubUser.get();
-
-                        final FrmRepository frmRepository = new FrmRepository(imageService, githubUser);
-                        frmRepository.setVisible(true);
-                    } else {
-                        JOptionPane.showMessageDialog(null,
-                                "Gheasy cannot be used without gh being authorized.\n\nTo be able to use the app, please login your account using \"gh auth login\" in a shell.",
-                                "Gheasy | Error",
-                                JOptionPane.ERROR_MESSAGE
-                        );
-                        System.exit(1);
-                    }
-
+                .doOnError(err -> {
+                    JOptionPane.showMessageDialog(null,
+                            "Gheasy cannot be used without gh being authorized.\n\nTo be able to use the app, please login your account using \"gh auth login\" in a shell.",
+                            "Gheasy | Error",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                    System.exit(1);
+                })
+                .subscribe(githubUser -> {
+                    final FrmRepository frmRepository = new FrmRepository(imageService, githubRepositoryService, githubUser);
+                    frmRepository.setVisible(true);
                 });
-
 
     }
 }

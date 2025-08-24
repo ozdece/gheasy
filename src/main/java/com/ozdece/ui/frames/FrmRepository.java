@@ -2,12 +2,17 @@ package com.ozdece.ui.frames;
 
 import com.ozdece.GheasyApplication;
 import com.ozdece.github.auth.model.GithubUser;
-import com.ozdece.github.repository.GithubRepository;
+import com.ozdece.github.repository.model.GithubRepository;
+import com.ozdece.github.repository.GithubRepositoryService;
 import com.ozdece.image.ImageService;
 import com.ozdece.ui.SwingScheduler;
+import com.ozdece.ui.models.GithubRepositoryListModel;
+import com.ozdece.ui.renderers.GithubRepositoryListCellRenderer;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.io.File;
 
 public class FrmRepository extends JFrame {
 
@@ -25,15 +30,19 @@ public class FrmRepository extends JFrame {
 
     private final GithubUser githubUser;
 
-    public FrmRepository(ImageService imageService, GithubUser githubUser) {
+    private final ImageService imageService;
+    private final GithubRepositoryService githubRepositoryService;
+
+    public FrmRepository(ImageService imageService, GithubRepositoryService githubRepositoryService, GithubUser githubUser) {
         super("Gheasy | " + githubUser.username());
         this.githubUser = githubUser;
+        this.githubRepositoryService = githubRepositoryService;
+        this.imageService = imageService;
 
         setupFrame();
-
-        imageService.saveGitHubAvatar(githubUser.avatarUrl())
-                .publishOn(SwingScheduler.edt())
-                .subscribe(maybeImageIcon -> maybeImageIcon.ifPresent(lblLoggedInUser::setIcon));
+        //TODO: load the avatar after the frame is loaded
+        updateGithubAvatar();
+        loadBookmarkedRepositories();
     }
 
     private void setupFrame() {
@@ -52,6 +61,7 @@ public class FrmRepository extends JFrame {
         final JPanel centralPanel = new JPanel();
         final GroupLayout groupLayout = new GroupLayout(centralPanel);
 
+        lstGithubRepository.setCellRenderer(new GithubRepositoryListCellRenderer());
         final JScrollPane spLstGithubRepository = new JScrollPane(lstGithubRepository);
 
         final JLabel lblGheasy = new JLabel("Gheasy, Easy gh UI tool");
@@ -86,6 +96,8 @@ public class FrmRepository extends JFrame {
         pnlActionButtons.setLayout(new FlowLayout(FlowLayout.RIGHT));
 
         btnRemoveRepoFromList.setEnabled(false);
+
+        btnBrowseRepo.addActionListener(this::onBtnBrowseRepoClicked);
 
         pnlActionButtons.add(btnBrowseRepo);
         pnlActionButtons.add(btnRemoveRepoFromList);
@@ -149,5 +161,54 @@ public class FrmRepository extends JFrame {
         return centralPanel;
     }
 
+    private void onBtnBrowseRepoClicked(ActionEvent e) {
+        final JFileChooser githubFolderChooser = new JFileChooser();
+
+        githubFolderChooser.setApproveButtonText("Choose Folder");
+        githubFolderChooser.setDialogTitle("Choose a GitHub Repository Folder");
+        githubFolderChooser.setAcceptAllFileFilterUsed(false);
+        githubFolderChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+        final int dialogResponse = githubFolderChooser.showOpenDialog(this);
+
+        if (dialogResponse != JFileChooser.APPROVE_OPTION) return;
+
+        final File selectedFile = githubFolderChooser.getSelectedFile();
+
+        githubRepositoryService.isGitHubRepo(selectedFile)
+                //TODO: Define constants for JOptionPane titles
+                .doOnError(err ->
+                        JOptionPane.showMessageDialog(
+                                null,
+                                "Cannot determine the selected folder as GitHub repository folder!",
+                                "Gheasy | Error",
+                                JOptionPane.ERROR_MESSAGE)
+                )
+                .then(githubRepositoryService.get(selectedFile))
+                .flatMap(githubRepositoryService::upsertBookmark)
+                .subscribe(githubRepository -> {
+                    System.out.println(githubRepository);
+                });
+
+    }
+
+    private void updateGithubAvatar() {
+
+        imageService.saveGitHubAvatar(githubUser.avatarUrl())
+                //TODO: log this via logger
+                .doOnError(err -> System.err.println("An error occurred while saving Github avatar\n" + err.getMessage()))
+                .publishOn(SwingScheduler.edt())
+                .subscribe(maybeImageIcon -> maybeImageIcon.ifPresent(lblLoggedInUser::setIcon));
+    }
+
+    private void loadBookmarkedRepositories() {
+        githubRepositoryService.getBookmarkedRepositories()
+                .publishOn(SwingScheduler.edt())
+                .subscribe(githubRepositories -> {
+                    final GithubRepositoryListModel listModel = new GithubRepositoryListModel(githubRepositories.asList());
+
+                    lstGithubRepository.setModel(listModel);
+                });
+    }
 
 }

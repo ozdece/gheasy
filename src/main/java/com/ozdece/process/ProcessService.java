@@ -1,10 +1,13 @@
 package com.ozdece.process;
 
-import io.vavr.control.Either;
+import java.io.IOException;
 
 public interface ProcessService {
 
-    <T> Either<Throwable, T> getThenParseProcessOutput(ProcessBuilder processBuilder, Class<T> resultObjectClass);
-    Either<Throwable, Integer> getProcessExitCode(ProcessBuilder processBuilder);
+    <T> T getThenParseProcessOutput(ProcessBuilder processBuilder, Class<T> resultObjectClass) throws IOException, InterruptedException;
+    <T> T getThenParseProcessOutput(ProcessBuilder processBuilder, Class<T> resultObjectClass, ProcessResponse processResponse) throws IOException, InterruptedException;
+    String getProcessOutput(ProcessBuilder processBuilder) throws IOException, InterruptedException;
+
+    int getProcessExitCode(ProcessBuilder processBuilder) throws IOException, InterruptedException;
 
 }
