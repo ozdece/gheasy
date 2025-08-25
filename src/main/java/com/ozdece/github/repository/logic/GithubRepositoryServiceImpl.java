@@ -55,6 +55,22 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
                 .thenReturn(githubRepository);
     }
 
+    @Override
+    public Mono<ImmutableSet<GithubRepository>> removeBookmark(GithubRepository githubRepository) {
+        return getBookmarkedRepositories()
+                .map(repos -> removeBookmark(repos, githubRepository))
+                .flatMap(updatedBookmarks ->
+                        saveBookmarkChanges(updatedBookmarks)
+                                .thenReturn(updatedBookmarks)
+                );
+    }
+
+    private ImmutableSet<GithubRepository> removeBookmark(ImmutableSet<GithubRepository> githubRepositories, GithubRepository githubRepository) {
+            return githubRepositories.stream()
+                    .filter(repo -> !repo.id().equals(githubRepository.id()))
+                    .collect(ImmutableSet.toImmutableSet());
+    }
+
     private Mono<Void> saveBookmarkChanges(ImmutableSet<GithubRepository> githubRepositories) {
         return Mono.fromCallable(() -> {
            final byte[] jsonBytes = jsonMapper.writeValueAsBytes(githubRepositories);

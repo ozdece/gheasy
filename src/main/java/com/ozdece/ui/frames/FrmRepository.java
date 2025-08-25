@@ -63,9 +63,25 @@ public class FrmRepository extends JFrame {
         final JPanel centralPanel = new JPanel();
         final GroupLayout groupLayout = new GroupLayout(centralPanel);
 
+        btnRemoveRepoFromList.addActionListener(this::onRemoveRepoFromListClicked);
+
         lstGithubRepository.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
+
+                // If the right click button is clicked
+                if (e.getButton() == MouseEvent.BUTTON3) {
+                    final Point mousePoint = new Point(e.getX(), e.getY());
+                    final int positionIndex = lstGithubRepository.locationToIndex(mousePoint);
+
+                    // If we can't point any item then end the call
+                    if (positionIndex == -1)
+                        return;
+
+                    lstGithubRepository.setSelectedIndex(positionIndex);
+                    showBookmarkPopupMenu(lstGithubRepository, mousePoint.x, mousePoint.y);
+                }
+
                 // We don't switch to dashboard if it's not double clicked!
                 if (e.getClickCount() != 2) return;
 
@@ -90,6 +106,10 @@ public class FrmRepository extends JFrame {
 
             @Override
             public void mouseExited(MouseEvent e) {}
+        });
+
+        lstGithubRepository.addListSelectionListener(e -> {
+            btnRemoveRepoFromList.setEnabled(true);
         });
 
         lstGithubRepository.setCellRenderer(new GithubRepositoryListCellRenderer());
@@ -248,10 +268,62 @@ public class FrmRepository extends JFrame {
     }
 
     private void loadMainDashboard(GithubRepository githubRepository) {
-       final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, githubRepository);
+        final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, githubRepository);
 
-       frmMainDashboard.setVisible(true);
-       this.dispose();
+        frmMainDashboard.setVisible(true);
+        this.dispose();
+    }
+
+    private void showBookmarkPopupMenu(JComponent parent, int xPos, int yPos) {
+        final JPopupMenu popupMenu = new JPopupMenu();
+
+        final JMenuItem miOpenRepository = new JMenuItem("Load Repository");
+        final JMenuItem miRemoveRepository = new JMenuItem("Remove From List");
+
+        miOpenRepository.addActionListener(e -> {
+            //TODO: make sure that item index is not -1 for safety
+            final GithubRepository selectedGithubRepository = lstGithubRepository.getSelectedValue();
+            this.loadMainDashboard(selectedGithubRepository);
+        });
+
+        miRemoveRepository.addActionListener(this::onRemoveRepoFromListClicked);
+
+        popupMenu.add(miOpenRepository);
+        popupMenu.add(miRemoveRepository);
+
+        popupMenu.show(parent, xPos, yPos);
+    }
+
+    private void onRemoveRepoFromListClicked(ActionEvent e) {
+
+        final int selectedIndex = lstGithubRepository.getSelectedIndex();
+
+        if (selectedIndex == -1) {
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Please first select a repository to remove from list.",
+                    //TODO: Set up a class where you retrieve these titles
+                    "Gheasy | Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+
+        final GithubRepository selectedGithubRepository = lstGithubRepository.getSelectedValue();
+        githubRepositoryService
+                .removeBookmark(selectedGithubRepository)
+                .doOnError(err -> JOptionPane.showMessageDialog(
+                        null,
+                        "An error occurred while removing the repository from list\n" + err.getMessage(),
+                        //TODO: Set up a class where you retrieve these titles
+                        "Gheasy | Error",
+                        JOptionPane.ERROR_MESSAGE
+                ))
+                .publishOn(SwingScheduler.edt())
+                .subscribe(updatedBookmarks -> {
+                    final GithubRepositoryListModel model = new GithubRepositoryListModel(new ArrayList<>(updatedBookmarks));
+                    lstGithubRepository.setModel(model);
+                });
     }
 
 }
