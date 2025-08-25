@@ -5,6 +5,7 @@ import com.ozdece.github.auth.model.GithubUser;
 import com.ozdece.github.repository.model.GithubRepository;
 import com.ozdece.github.repository.GithubRepositoryService;
 import com.ozdece.image.ImageService;
+import com.ozdece.ui.Fonts;
 import com.ozdece.ui.SwingScheduler;
 import com.ozdece.ui.models.GithubRepositoryListModel;
 import com.ozdece.ui.renderers.GithubRepositoryListCellRenderer;
@@ -12,7 +13,10 @@ import com.ozdece.ui.renderers.GithubRepositoryListCellRenderer;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.File;
+import java.util.ArrayList;
 
 public class FrmRepository extends JFrame {
 
@@ -34,14 +38,12 @@ public class FrmRepository extends JFrame {
     private final GithubRepositoryService githubRepositoryService;
 
     public FrmRepository(ImageService imageService, GithubRepositoryService githubRepositoryService, GithubUser githubUser) {
-        super("Gheasy | " + githubUser.username());
+        super("Gheasy | User: " + githubUser.username());
         this.githubUser = githubUser;
         this.githubRepositoryService = githubRepositoryService;
         this.imageService = imageService;
 
         setupFrame();
-        //TODO: load the avatar after the frame is loaded
-        updateGithubAvatar();
         loadBookmarkedRepositories();
     }
 
@@ -61,16 +63,47 @@ public class FrmRepository extends JFrame {
         final JPanel centralPanel = new JPanel();
         final GroupLayout groupLayout = new GroupLayout(centralPanel);
 
+        lstGithubRepository.addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // We don't switch to dashboard if it's not double clicked!
+                if (e.getClickCount() != 2) return;
+
+                final int selectedIndex = lstGithubRepository.getSelectedIndex();
+
+                // If no element is selected then don't do anything
+                if (selectedIndex == -1) return;
+
+                final GithubRepository selectedRepo = lstGithubRepository.getSelectedValue();
+
+                loadMainDashboard(selectedRepo);
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {}
+
+            @Override
+            public void mouseReleased(MouseEvent e) {}
+
+            @Override
+            public void mouseEntered(MouseEvent e) {}
+
+            @Override
+            public void mouseExited(MouseEvent e) {}
+        });
+
         lstGithubRepository.setCellRenderer(new GithubRepositoryListCellRenderer());
         final JScrollPane spLstGithubRepository = new JScrollPane(lstGithubRepository);
 
+        spLstGithubRepository.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+
         final JLabel lblGheasy = new JLabel("Gheasy, Easy gh UI tool");
-        lblGheasy.setFont(lblGheasy.getFont().deriveFont(24f).deriveFont(Font.BOLD));
+        lblGheasy.setFont(Fonts.boldFontWithSize(24));
 
         final JLabel lblVersion = new JLabel("Version: ");
         final JLabel lblVersionNumber = new JLabel(GheasyApplication.VERSION);
 
-        final Font versionFont = lblVersion.getFont().deriveFont(14f);
+        final Font versionFont = Fonts.fontWithSize(14);
 
         lblVersionNumber.setFont(versionFont);
         lblVersion.setFont(versionFont);
@@ -83,14 +116,14 @@ public class FrmRepository extends JFrame {
 
 
         lblLoggedInUser.setText(loggedInUserText);
-        lblLoggedInUser.setFont(lblLoggedInUser.getFont().deriveFont(16f));
+        lblLoggedInUser.setFont(Fonts.fontWithSize(16));
 
         tbBottomBar.setLayout(new FlowLayout(FlowLayout.CENTER));
 
         tbBottomBar.add(lblLoggedInUser);
 
         final JLabel lblRepositories = new JLabel("Repositories");
-        lblRepositories.setFont(lblRepositories.getFont().deriveFont(Font.BOLD));
+        lblRepositories.setFont(Fonts.BOLD_FONT);
 
         final JPanel pnlActionButtons = new JPanel();
         pnlActionButtons.setLayout(new FlowLayout(FlowLayout.RIGHT));
@@ -176,7 +209,8 @@ public class FrmRepository extends JFrame {
         final File selectedFile = githubFolderChooser.getSelectedFile();
 
         githubRepositoryService.isGitHubRepo(selectedFile)
-                //TODO: Define constants for JOptionPane titles
+                .then(githubRepositoryService.get(selectedFile))
+                .flatMap(githubRepositoryService::upsertBookmark)
                 .doOnError(err ->
                         JOptionPane.showMessageDialog(
                                 null,
@@ -184,15 +218,17 @@ public class FrmRepository extends JFrame {
                                 "Gheasy | Error",
                                 JOptionPane.ERROR_MESSAGE)
                 )
-                .then(githubRepositoryService.get(selectedFile))
-                .flatMap(githubRepositoryService::upsertBookmark)
+                .publishOn(SwingScheduler.edt())
                 .subscribe(githubRepository -> {
-                    System.out.println(githubRepository);
-                });
+                    ((GithubRepositoryListModel) lstGithubRepository.getModel())
+                            .upsertGithubRepository(githubRepository);
 
+                    loadMainDashboard(githubRepository);
+                    this.dispose();
+                });
     }
 
-    private void updateGithubAvatar() {
+    public void updateGithubAvatar() {
 
         imageService.saveGitHubAvatar(githubUser.avatarUrl())
                 //TODO: log this via logger
@@ -205,10 +241,17 @@ public class FrmRepository extends JFrame {
         githubRepositoryService.getBookmarkedRepositories()
                 .publishOn(SwingScheduler.edt())
                 .subscribe(githubRepositories -> {
-                    final GithubRepositoryListModel listModel = new GithubRepositoryListModel(githubRepositories.asList());
+                    final GithubRepositoryListModel listModel = new GithubRepositoryListModel(new ArrayList<>(githubRepositories.asList()));
 
                     lstGithubRepository.setModel(listModel);
                 });
+    }
+
+    private void loadMainDashboard(GithubRepository githubRepository) {
+       final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, githubRepository);
+
+       frmMainDashboard.setVisible(true);
+       this.dispose();
     }
 
 }

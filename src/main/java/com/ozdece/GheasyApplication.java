@@ -74,6 +74,7 @@ public class GheasyApplication {
                 })
                 .subscribe(githubUser -> {
                     final FrmRepository frmRepository = new FrmRepository(imageService, githubRepositoryService, githubUser);
+                    frmRepository.updateGithubAvatar();
                     frmRepository.setVisible(true);
                 });
 

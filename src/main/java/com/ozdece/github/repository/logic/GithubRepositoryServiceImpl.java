@@ -19,8 +19,7 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
     private final ImmutableList<String> gitLocalRepoCheckCommand = ImmutableList.of("git", "rev-parse", "--is-inside-work-tree");
     private final ImmutableList<String> gitGithubRepoCheckCommand = ImmutableList.of("git", "remote", "get-url", "origin");
     private final ImmutableList<String> githubRepositoryViewCommand = ImmutableList.of("gh", "repo", "view", "--json",
-            "id,createdAt,description,forkCount,homepageUrl,isArchived,isEmpty,isFork,isPrivate,isSecurityPolicyEnabled," +
-            "isTemplate,labels,languages,latestRelease,licenseInfo,name,nameWithOwner,owner,parent,primaryLanguage,projects,pullRequests,updatedAt,url,visibility");
+            "id,createdAt,description,forkCount,homepageUrl,isArchived,isEmpty,isPrivate,licenseInfo,name,nameWithOwner,owner,primaryLanguage,pullRequests,updatedAt,url,visibility");
 
     private final ProcessService processService;
 
@@ -44,7 +43,8 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
         final ProcessBuilder processBuilder = new ProcessBuilder(githubRepositoryViewCommand)
                 .directory(repositoryDirectory);
 
-        return Mono.fromCallable(() -> processService.getThenParseProcessOutput(processBuilder, GithubRepository.class));
+        return Mono.fromCallable(() -> processService.getThenParseProcessOutput(processBuilder, GithubRepository.class)
+                .withDirectoryPath(repositoryDirectory.getAbsolutePath()));
     }
 
     @Override
@@ -93,9 +93,12 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
                     throw new IllegalStateException("The bookmark file cannot be created!");
                 }
 
+                //Write empty array into the file after its created.
+                Files.write(bookmarkFile.toPath(), "[]".getBytes());
                 return ImmutableSet.of();
             } else {
                 final byte[] bookmarkFileBytes = Files.readAllBytes(bookmarkFile.toPath());
+                //TODO: Write a validator of this of the objects of the set as they might get updated by user manually.
                 final ImmutableSet<GithubRepository> repositories = jsonMapper.readValue(bookmarkFileBytes, new TypeReference<>() {});
 
                 return repositories;
