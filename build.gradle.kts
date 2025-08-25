@@ -1,6 +1,7 @@
 plugins {
     id("java")
     id("groovy")
+    id("application")
 }
 
 group = "com.ozdece"
@@ -33,13 +34,24 @@ dependencies {
     implementation("io.vavr:vavr:0.10.7")
 }
 
+application {
+    mainClass.set("com.ozdece.gheasy.GheasyApplication")
+}
+
 tasks.jar {
     manifest {
         attributes(
             "Implementation-Title" to project.name,
-            "Implementation-Version" to version
+            "Implementation-Version" to version,
+            "Main-Class" to "com.ozdece.gheasy.GheasyApplication"
         )
     }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(
+        configurations.runtimeClasspath.get().map {
+            if (it.isDirectory) it else zipTree(it)
+        }
+    )
 }
 
 tasks.test {
