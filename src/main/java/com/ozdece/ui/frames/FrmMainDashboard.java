@@ -11,7 +11,7 @@ public class FrmMainDashboard extends JFrame {
     private final GithubRepository repository;
 
     public FrmMainDashboard(GithubUser user, GithubRepository repository) {
-        super(String.format("Gheasy | %s Dashboard", repository.name()));
+        super(String.format("Gheasy | %s Dashboard", repository.nameWithOwner()));
 
         setBounds(250, 250, 1000, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
