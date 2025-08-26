@@ -12,7 +12,12 @@ import com.ozdece.gheasy.image.logic.ImageServiceImpl;
 import com.ozdece.gheasy.process.ProcessService;
 import com.ozdece.gheasy.process.ProcessServiceImpl;
 import com.ozdece.gheasy.ui.frames.FrmRepository;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import static com.ozdece.gheasy.ui.DialogTitles.OPTION_PANE_ERROR_TITLE;
 import static io.vavr.API.Try;
 
 import javax.swing.*;
@@ -21,12 +26,16 @@ import java.util.Optional;
 
 public class GheasyApplication {
 
+    private static final Logger logger = LoggerFactory.getLogger(GheasyApplication.class);
+
     public static final String CONFIG_FOLDER_PATH = System.getProperty("user.home") + "/.gheasy";
     public static final String VERSION = Optional.ofNullable(GheasyApplication.class.getPackage().getImplementationVersion()).orElse("<unknown>");
 
+    private static final Config appConfig = ConfigFactory.load();
+
     private static final ProcessService processService = new ProcessServiceImpl();
     private static final GhAuthService ghAuthService = new GhAuthServiceImpl(processService);
-    private static final ImageService imageService = new ImageServiceImpl(processService);
+    private static final ImageService imageService = new ImageServiceImpl(processService, appConfig);
     private static final GithubRepositoryService githubRepositoryService = new GithubRepositoryServiceImpl(processService, GheasyApplication.CONFIG_FOLDER_PATH);
 
     private static final ImmutableSet<String> MANDATORY_APPS_TO_BE_PRESENT = ImmutableSet.of("git", "gh");
@@ -38,10 +47,9 @@ public class GheasyApplication {
 
         if (!configFolder.exists()) {
             if (configFolder.mkdir()){
-              //TODO: Replace this with logging
-              System.out.printf("Gheasy config folder is created at %s%n", CONFIG_FOLDER_PATH);
+                logger.info("Gheasy config folder is created at {}", CONFIG_FOLDER_PATH);
             } else {
-               System.err.println("An error occurred while creating the config folder of Gheasy. Exiting....");
+                logger.error("An error occurred while creating the config folder of Gheasy. Exiting....");
                System.exit(-5);
             }
         }
@@ -57,7 +65,7 @@ public class GheasyApplication {
                     if (commandExitCode != 0) {
                         JOptionPane.showMessageDialog(null,
                                 String.format("%s seems not to be installed on your computer. Make sure that %s is installed and %s executable is accessible through shell.", app, app, app),
-                                "Gheasy | Error",
+                                OPTION_PANE_ERROR_TITLE,
                                 JOptionPane.ERROR_MESSAGE
                         );
                         System.exit(-1);
@@ -67,7 +75,7 @@ public class GheasyApplication {
                 .doOnError(err -> {
                     JOptionPane.showMessageDialog(null,
                             "Gheasy cannot be used without gh being authorized.\n\nTo be able to use the app, please login your account using \"gh auth login\" in a shell.",
-                            "Gheasy | Error",
+                            OPTION_PANE_ERROR_TITLE,
                             JOptionPane.ERROR_MESSAGE
                     );
                     System.exit(1);

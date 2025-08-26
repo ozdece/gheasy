@@ -82,7 +82,6 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
                 return ImmutableSet.of();
             } else {
                 final byte[] bookmarkFileBytes = Files.readAllBytes(bookmarkFile.toPath());
-                //TODO: Write a validator of this of the objects of the set as they might get updated by user manually.
                 final ImmutableSet<GithubRepository> repositories = jsonMapper.readValue(bookmarkFileBytes, new TypeReference<>() {});
 
                 return repositories;
@@ -91,19 +90,19 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
     }
 
     private ImmutableSet<GithubRepository> removeBookmark(ImmutableSet<GithubRepository> githubRepositories, GithubRepository githubRepository) {
-            return githubRepositories.stream()
-                    .filter(repo -> !repo.id().equals(githubRepository.id()))
-                    .collect(ImmutableSet.toImmutableSet());
+        return githubRepositories.stream()
+                .filter(repo -> !repo.id().equals(githubRepository.id()))
+                .collect(ImmutableSet.toImmutableSet());
     }
 
     private Mono<Void> saveBookmarkChanges(ImmutableSet<GithubRepository> githubRepositories) {
         return Mono.fromCallable(() -> {
-           final byte[] jsonBytes = jsonMapper.writeValueAsBytes(githubRepositories);
-           final File bookmarkFile = new File(bookmarkFilePath);
+                    final byte[] jsonBytes = jsonMapper.writeValueAsBytes(githubRepositories);
+                    final File bookmarkFile = new File(bookmarkFilePath);
 
-           return Files.write(bookmarkFile.toPath(), jsonBytes);
-        })
-        .then();
+                    return Files.write(bookmarkFile.toPath(), jsonBytes);
+                })
+                .then();
     }
 
     private ImmutableSet<GithubRepository> updateBookmarks(ImmutableSet<GithubRepository> githubRepositories, GithubRepository githubRepository) {

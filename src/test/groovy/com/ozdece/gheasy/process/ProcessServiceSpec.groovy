@@ -1,5 +1,7 @@
 package com.ozdece.gheasy.process
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import spock.lang.Specification
 
 import java.nio.file.Files
@@ -13,34 +15,36 @@ class ProcessServiceSpec extends Specification {
     static final String SNAKE_CASE_JSON_FILE_PATH = TEST_FILES_DIR + "/snake_case_json.json"
     static final String CAMEL_CASE_JSON_FILE_PATH = TEST_FILES_DIR + "/camel_case_json.json"
 
+    private static final Logger logger = LoggerFactory.getLogger(ProcessServiceSpec.class)
+
     final ProcessService processService = new ProcessServiceImpl()
 
     def setupSpec() {
-        final File tmpFile = new File(TEST_FILES_DIR);
+        final File tmpFile = new File(TEST_FILES_DIR)
 
         if (!tmpFile.exists()) {
-            tmpFile.mkdir();
+            tmpFile.mkdir()
         }
 
         String output =  "{"
         final File corruptedJsonFile = new File(CORRUPTED_JSON_FILE_PATH)
         Files.write(corruptedJsonFile.toPath(), output.getBytes())
-        System.out.println("Wrote \"${output}\" into ${corruptedJsonFile.getAbsolutePath()}")
+        logger.debug("Wrote \"{}\" into {}", output, corruptedJsonFile.getAbsolutePath())
 
         output = "true"
         final File booleanJsonFile = new File(JSON_FILE_PATH)
         Files.write(booleanJsonFile.toPath(), "true".getBytes())
-        System.out.println("Wrote \"${output}\" into ${booleanJsonFile.getAbsolutePath()}")
+        logger.debug("Wrote \"{}\" into {}", output, booleanJsonFile.getAbsolutePath())
 
         final String snakeCaseJson = "{\"name_surname\": \"John Doe\"}"
         final File snakeCaseJsonFile = new File(SNAKE_CASE_JSON_FILE_PATH)
         Files.write(snakeCaseJsonFile.toPath(), snakeCaseJson.getBytes())
-        System.out.println("Wrote \"${snakeCaseJson}\" into ${snakeCaseJsonFile.getAbsolutePath()}")
+        logger.debug("Wrote \"{}\" into {}", snakeCaseJson, snakeCaseJsonFile.getAbsolutePath())
 
         final String camelCaseJson = "{\"nameSurname\": \"John Doe\"}"
         final File camelCaseJsonFile = new File(CAMEL_CASE_JSON_FILE_PATH)
         Files.write(camelCaseJsonFile.toPath(), camelCaseJson.getBytes())
-        System.out.println("Wrote \"${camelCaseJson}\" into ${camelCaseJsonFile.getAbsolutePath()}")
+        logger.debug("Wrote \"{}\" into {}", camelCaseJson, camelCaseJsonFile.getAbsolutePath())
     }
 
     def "should not get and parse process output if output is not a valid JSON"() {
@@ -129,7 +133,7 @@ class ProcessServiceSpec extends Specification {
     }
 
     def cleanupSpec() {
-        final File tmpFile = new File(TEST_FILES_DIR);
+        final File tmpFile = new File(TEST_FILES_DIR)
         boolean filesDeleted = tmpFile.deleteDir()
 
         if (filesDeleted) {

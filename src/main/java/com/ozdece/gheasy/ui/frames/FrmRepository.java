@@ -9,6 +9,8 @@ import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.SwingScheduler;
 import com.ozdece.gheasy.ui.models.GithubRepositoryListModel;
 import com.ozdece.gheasy.ui.renderers.GithubRepositoryListCellRenderer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,6 +19,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
 import java.util.ArrayList;
+
+import static com.ozdece.gheasy.ui.DialogTitles.OPTION_PANE_ERROR_TITLE;
 
 public class FrmRepository extends JFrame {
 
@@ -36,6 +40,8 @@ public class FrmRepository extends JFrame {
 
     private final ImageService imageService;
     private final GithubRepositoryService githubRepositoryService;
+
+    private static final Logger logger = LoggerFactory.getLogger(FrmRepository.class);
 
     public FrmRepository(ImageService imageService, GithubRepositoryService githubRepositoryService, GithubUser githubUser) {
         super("Gheasy | User: " + githubUser.username());
@@ -108,9 +114,7 @@ public class FrmRepository extends JFrame {
             public void mouseExited(MouseEvent e) {}
         });
 
-        lstGithubRepository.addListSelectionListener(e -> {
-            btnRemoveRepoFromList.setEnabled(true);
-        });
+        lstGithubRepository.addListSelectionListener(e -> btnRemoveRepoFromList.setEnabled(true));
 
         lstGithubRepository.setCellRenderer(new GithubRepositoryListCellRenderer());
         final JScrollPane spLstGithubRepository = new JScrollPane(lstGithubRepository);
@@ -235,7 +239,7 @@ public class FrmRepository extends JFrame {
                         JOptionPane.showMessageDialog(
                                 null,
                                 "Cannot determine the selected folder as GitHub repository folder!",
-                                "Gheasy | Error",
+                                OPTION_PANE_ERROR_TITLE,
                                 JOptionPane.ERROR_MESSAGE)
                 )
                 .publishOn(SwingScheduler.edt())
@@ -251,8 +255,7 @@ public class FrmRepository extends JFrame {
     public void updateGithubAvatar() {
 
         imageService.saveGitHubAvatar(githubUser.avatarUrl())
-                //TODO: log this via logger
-                .doOnError(err -> System.err.println("An error occurred while saving Github avatar\n" + err.getMessage()))
+                .doOnError(err -> logger.error("An error occurred while saving Github avatar!", err))
                 .publishOn(SwingScheduler.edt())
                 .subscribe(maybeImageIcon -> maybeImageIcon.ifPresent(lblLoggedInUser::setIcon));
     }
@@ -281,7 +284,17 @@ public class FrmRepository extends JFrame {
         final JMenuItem miRemoveRepository = new JMenuItem("Remove From List");
 
         miOpenRepository.addActionListener(e -> {
-            //TODO: make sure that item index is not -1 for safety
+            final int selectedIndex = lstGithubRepository.getSelectedIndex();
+
+            if (selectedIndex == -1) {
+                JOptionPane.showMessageDialog(null,
+                        "You should choose a repository to open.",
+                        OPTION_PANE_ERROR_TITLE,
+                        JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+
             final GithubRepository selectedGithubRepository = lstGithubRepository.getSelectedValue();
             this.loadMainDashboard(selectedGithubRepository);
         });
@@ -302,8 +315,7 @@ public class FrmRepository extends JFrame {
             JOptionPane.showMessageDialog(
                     null,
                     "Please first select a repository to remove from list.",
-                    //TODO: Set up a class where you retrieve these titles
-                    "Gheasy | Error",
+                    OPTION_PANE_ERROR_TITLE,
                     JOptionPane.ERROR_MESSAGE
             );
             return;
@@ -315,8 +327,7 @@ public class FrmRepository extends JFrame {
                 .doOnError(err -> JOptionPane.showMessageDialog(
                         null,
                         "An error occurred while removing the repository from list\n" + err.getMessage(),
-                        //TODO: Set up a class where you retrieve these titles
-                        "Gheasy | Error",
+                        OPTION_PANE_ERROR_TITLE,
                         JOptionPane.ERROR_MESSAGE
                 ))
                 .publishOn(SwingScheduler.edt())

@@ -10,6 +10,8 @@ version = "1.0-SNAPSHOT"
 // Dependency versions
 val reactorVersion = "3.7.9"
 val jacksonVersion = "2.19.2"
+val slf4jVersion = "2.0.17"
+val logbackVersion = "1.5.18"
 
 repositories {
     mavenCentral()
@@ -32,6 +34,9 @@ dependencies {
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
     implementation("io.vavr:vavr:0.10.7")
+    implementation("org.slf4j:slf4j-api:$slf4jVersion")
+    implementation("ch.qos.logback:logback-classic:$logbackVersion")
+    implementation("com.typesafe:config:1.4.3")
 }
 
 application {

@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.ozdece.gheasy.GheasyApplication;
 import com.ozdece.gheasy.image.ImageService;
 import com.ozdece.gheasy.process.ProcessService;
+import com.typesafe.config.Config;
 import reactor.core.publisher.Mono;
 
 import javax.swing.*;
@@ -13,13 +14,13 @@ public class ImageServiceImpl implements ImageService {
 
     private final ProcessService processService;
 
-    //TODO: Read this from a config file
-    private final int SCALED_IMAGE_SIZE = 20;
+    private final int SCALED_IMAGE_SIZE;
 
     private final String GITHUB_AVATAR_PATH = GheasyApplication.CONFIG_FOLDER_PATH + "/github_avatar.png";
 
-    public ImageServiceImpl(ProcessService processService) {
+    public ImageServiceImpl(ProcessService processService, Config appConfig) {
         this.processService = processService;
+        SCALED_IMAGE_SIZE = appConfig.getInt("gheasy.images.avatar-scaled-image-size");
     }
 
     @Override

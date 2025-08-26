@@ -2,6 +2,8 @@ package com.ozdece.gheasy.process;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.ozdece.gheasy.json.GheasyObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,6 +13,8 @@ public class ProcessServiceImpl implements ProcessService {
 
     private static final JsonMapper snakeCaseJsonMapper = GheasyObjectMapper.getSnakeCaseJsonMapper();
     private static final JsonMapper defaultJsonMapper = GheasyObjectMapper.getDefaultJsonMapper();
+
+    private static final Logger logger = LoggerFactory.getLogger(ProcessServiceImpl.class);
 
     @Override
     public <T> T getThenParseProcessOutput(ProcessBuilder processBuilder, Class<T> resultObjectClass) throws IOException, InterruptedException {
@@ -35,7 +39,7 @@ public class ProcessServiceImpl implements ProcessService {
     @Override
     public int getProcessExitCode(ProcessBuilder processBuilder) throws IOException, InterruptedException {
         final String commandStr = String.join(" ", processBuilder.command());
-        System.out.printf("Running command: %s\n", commandStr);
+        logger.debug("Running command: {}", commandStr);
         final Process process = processBuilder.start();
 
         return process.waitFor();
@@ -44,7 +48,7 @@ public class ProcessServiceImpl implements ProcessService {
     private byte[] getProcessOutputBytes(ProcessBuilder processBuilder) throws IOException, InterruptedException {
 
         final String commandStr = String.join(" ", processBuilder.command());
-        System.out.printf("Running command: %s\n", commandStr);
+        logger.debug("Running command: {}", commandStr);
 
         final Process process = processBuilder.start();
 
