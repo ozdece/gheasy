@@ -32,6 +32,15 @@ public class ProcessServiceImpl implements ProcessService {
         return new String(getProcessOutputBytes(processBuilder), StandardCharsets.UTF_8);
     }
 
+    @Override
+    public int getProcessExitCode(ProcessBuilder processBuilder) throws IOException, InterruptedException {
+        final String commandStr = String.join(" ", processBuilder.command());
+        System.out.printf("Running command: %s\n", commandStr);
+        final Process process = processBuilder.start();
+
+        return process.waitFor();
+    }
+
     private byte[] getProcessOutputBytes(ProcessBuilder processBuilder) throws IOException, InterruptedException {
 
         final String commandStr = String.join(" ", processBuilder.command());
@@ -44,20 +53,11 @@ public class ProcessServiceImpl implements ProcessService {
             final int exitCode = process.waitFor();
 
             if (exitCode != 0) {
-                // If the exit code is not zero, then throw non zero exit code exception
+                // If the exit code is not zero, then throw non-zero exit code exception
                 throw new NonZeroExitCodeException(commandStr, exitCode);
             }
 
             return bytes;
         }
-    }
-
-    @Override
-    public int getProcessExitCode(ProcessBuilder processBuilder) throws IOException, InterruptedException {
-        final String commandStr = String.join(" ", processBuilder.command());
-        System.out.printf("Running command: %s\n", commandStr);
-        final Process process = processBuilder.start();
-
-        return process.waitFor();
     }
 }

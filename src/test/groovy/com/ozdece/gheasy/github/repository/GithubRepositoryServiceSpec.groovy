@@ -1,0 +1,181 @@
+package com.ozdece.gheasy.github.repository
+
+import com.google.common.collect.ImmutableSet
+import com.ozdece.gheasy.github.repository.logic.GithubRepositoryServiceImpl
+import com.ozdece.gheasy.github.repository.model.GithubRepository
+import com.ozdece.gheasy.github.repository.model.PrimaryLanguage
+import com.ozdece.gheasy.github.repository.model.RepositoryOwner
+import com.ozdece.gheasy.github.repository.model.RepositoryVisibility
+import com.ozdece.gheasy.mocks.InMemoryProcessService
+import com.ozdece.gheasy.process.ProcessService
+import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
+import spock.lang.Specification
+
+import java.time.ZonedDateTime
+
+class GithubRepositoryServiceSpec extends Specification {
+
+    static String TEST_FILES_DIR = System.getProperty("java.io.tmpdir") + "/gheasy"
+
+    final ProcessService processService = new InMemoryProcessService()
+    final GithubRepositoryService githubRepositoryService = new GithubRepositoryServiceImpl(processService, TEST_FILES_DIR)
+
+    static String VALID_GITHUB_REPO_PATH = "${TEST_FILES_DIR}/valid_repo"
+    static String INVALID_GIT_REPO_PATH = "${TEST_FILES_DIR}/invalid_git_repo"
+    static String INVALID_GITHUB_REPO_PATH = "${TEST_FILES_DIR}/invalid_github_repo"
+
+    def setupSpec() {
+        final File tmpFile = new File(TEST_FILES_DIR)
+
+        if (!tmpFile.exists()) {
+            tmpFile.mkdir()
+        }
+    }
+
+    def cleanupSpec() {
+        final File tmpFile = new File(TEST_FILES_DIR)
+        boolean filesDeleted = tmpFile.deleteDir()
+
+        if (filesDeleted) {
+            println "Temporary files deleted successfully."
+        } else {
+            System.err.println("Deleting temporary files failed.")
+        }
+
+    }
+
+    def "should fail if a folder is not a git repository folder"() {
+        expect:
+        StepVerifier
+                .create(githubRepositoryService.isGitHubRepo(new File(INVALID_GIT_REPO_PATH)))
+                .expectErrorMatches {err -> err.getMessage() == "Unexpected response retrieved from git command while checking the local git repository."}
+                .verify()
+    }
+
+    def "should fail if a folder is a git repository but not a GitHub repository"() {
+        expect:
+        StepVerifier
+                .create(githubRepositoryService.isGitHubRepo(new File(INVALID_GITHUB_REPO_PATH)))
+                .expectErrorMatches {err -> err.getMessage() == "Unexpected response retrieved from git command while checking the local git repository."}
+                .verify()
+    }
+
+    def "should validate if a folder is a github repository folder"() {
+        expect:
+        StepVerifier
+                .create(githubRepositoryService.isGitHubRepo(new File(VALID_GITHUB_REPO_PATH)))
+                .expectComplete()
+                .verify()
+    }
+
+    def "should get Github repository details via directory"() {
+        expect:
+        StepVerifier
+        .create(githubRepositoryService.get(new File(VALID_GITHUB_REPO_PATH)))
+        .assertNext {repo -> repo.id() == "id"}
+        .verifyComplete()
+    }
+
+    def "should add a new bookmark if it doesn't exist"() {
+        given: 'A new GithubRepository'
+        final GithubRepository githubRepository = newGithubRepository("new-id")
+
+        when: 'A new github repository is being bookmarked'
+        Mono<GithubRepository> result = githubRepositoryService.upsertBookmark(githubRepository)
+
+        then: 'A new bookmark is added'
+        StepVerifier.create(result)
+                .assertNext {gr -> gr.id() == "new-id"}
+                .verifyComplete()
+
+        StepVerifier.create(githubRepositoryService.getBookmarkedRepositories())
+        .assertNext { bookmarks ->
+            bookmarks.size() == 1
+            bookmarks.toList().get(0).id() == "new-id"
+        }
+        .verifyComplete()
+    }
+
+    def "should update a bookmark if it already exist"() {
+        given: 'A new github repository'
+        final GithubRepository githubRepository = newGithubRepository("new-id")
+
+        and: 'A new github repository is being bookmarked'
+        StepVerifier.create(githubRepositoryService.upsertBookmark(githubRepository))
+                .assertNext {gr -> gr.id() == "new-id"}
+                .verifyComplete()
+
+        when: 'An existing bookmark is being updated'
+        final GithubRepository updated = githubRepository.withDirectoryPath("directory_path")
+        Mono<GithubRepository> result = githubRepositoryService.upsertBookmark(updated)
+
+        then: 'The bookmark is updated successfully'
+        StepVerifier.create(result)
+                .assertNext {gr -> gr.id() == "new-id" && gr.directoryPath() == "directory_path"}
+                .verifyComplete()
+
+        StepVerifier.create(githubRepositoryService.getBookmarkedRepositories())
+                .assertNext { bookmarks ->
+                    bookmarks.size() == 1
+                    bookmarks.toList().get(0).id() == "new-id"
+                }
+                .verifyComplete()
+    }
+
+    def "should remove a bookmark if it exists"() {
+        given: 'A new GithubRepository'
+        final GithubRepository githubRepository = newGithubRepository("new-id")
+
+        and: 'A new github repository is being bookmarked'
+        Mono<GithubRepository> upsertResult = githubRepositoryService.upsertBookmark(githubRepository)
+        StepVerifier.create(upsertResult)
+                .assertNext {gr -> gr.id() == "new-id"}
+                .verifyComplete()
+
+        StepVerifier.create(githubRepositoryService.getBookmarkedRepositories())
+                .assertNext { bookmarks ->
+                    bookmarks.size() == 1
+                    bookmarks.toList().get(0).id() == "new-id"
+                }
+                .verifyComplete()
+
+        when: 'An existing bookmark is trying to be removed'
+        Mono<ImmutableSet<GithubRepository>> removeResult = githubRepositoryService.removeBookmark(githubRepository)
+
+        then: 'The existing bookmark is removed'
+        StepVerifier.create(removeResult)
+        .assertNext {bookmarks -> bookmarks.isEmpty()}
+        .verifyComplete()
+    }
+
+    def "should do nothing and complete successfully if parameter github repository is not found in bookmarks"() {
+        given: 'A new GithubRepository'
+        final GithubRepository githubRepository = newGithubRepository("new-id")
+
+        when: 'trying to remove a bookmark that does not exist'
+        Mono<ImmutableSet<GithubRepository>> result = githubRepositoryService.removeBookmark(githubRepository)
+
+        then: 'ImmutableSet should remain as-is with successful complete'
+        StepVerifier.create(result)
+                .assertNext {bookmarks -> bookmarks.isEmpty()}
+                .verifyComplete()
+    }
+
+    private static GithubRepository newGithubRepository(String id) {
+        return new GithubRepository(
+                id,
+                "gheasy",
+                "ozdece/gheasy",
+                "/tmp",
+                Optional.empty(),
+                "https://example.com",
+                new RepositoryOwner("id", "ozdece"),
+                ZonedDateTime.now(),
+                Optional.empty(),
+                new PrimaryLanguage("Java"),
+                RepositoryVisibility.PUBLIC,
+                false
+        )
+    }
+}

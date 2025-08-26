@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.ozdece.gheasy.GheasyApplication;
 import com.ozdece.gheasy.github.repository.model.GithubRepository;
 import com.ozdece.gheasy.github.repository.GithubRepositoryService;
 import com.ozdece.gheasy.json.GheasyObjectMapper;
@@ -19,16 +18,17 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
     private final ImmutableList<String> gitLocalRepoCheckCommand = ImmutableList.of("git", "rev-parse", "--is-inside-work-tree");
     private final ImmutableList<String> gitGithubRepoCheckCommand = ImmutableList.of("git", "remote", "get-url", "origin");
     private final ImmutableList<String> githubRepositoryViewCommand = ImmutableList.of("gh", "repo", "view", "--json",
-            "id,createdAt,description,forkCount,homepageUrl,isArchived,isEmpty,isPrivate,licenseInfo,name,nameWithOwner,owner,primaryLanguage,pullRequests,updatedAt,url,visibility");
+            "id,createdAt,description,homepageUrl,isArchived,isPrivate,licenseInfo,name,nameWithOwner,owner,primaryLanguage,url,visibility");
 
     private final ProcessService processService;
 
-    private final String bookmarkFilePath = GheasyApplication.CONFIG_FOLDER_PATH + "/bookmarks.json";
+    private final String bookmarkFilePath;
 
     private static final JsonMapper jsonMapper = GheasyObjectMapper.getDefaultJsonMapper();
 
-    public GithubRepositoryServiceImpl(ProcessService processService) {
+    public GithubRepositoryServiceImpl(ProcessService processService, String configFolderPath) {
         this.processService = processService;
+        bookmarkFilePath = configFolderPath + "/bookmarks.json";
     }
 
     @Override
@@ -65,6 +65,31 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
                 );
     }
 
+    @Override
+    public Mono<ImmutableSet<GithubRepository>> getBookmarkedRepositories() {
+        return Mono.fromCallable(() -> {
+            final File bookmarkFile = new File(bookmarkFilePath);
+
+            if (!bookmarkFile.exists()) {
+                final boolean fileCreated = bookmarkFile.createNewFile();
+
+                if (!fileCreated) {
+                    throw new IllegalStateException("The bookmark file cannot be created!");
+                }
+
+                //Write empty array into the file after its created.
+                Files.write(bookmarkFile.toPath(), "[]".getBytes());
+                return ImmutableSet.of();
+            } else {
+                final byte[] bookmarkFileBytes = Files.readAllBytes(bookmarkFile.toPath());
+                //TODO: Write a validator of this of the objects of the set as they might get updated by user manually.
+                final ImmutableSet<GithubRepository> repositories = jsonMapper.readValue(bookmarkFileBytes, new TypeReference<>() {});
+
+                return repositories;
+            }
+        });
+    }
+
     private ImmutableSet<GithubRepository> removeBookmark(ImmutableSet<GithubRepository> githubRepositories, GithubRepository githubRepository) {
             return githubRepositories.stream()
                     .filter(repo -> !repo.id().equals(githubRepository.id()))
@@ -95,31 +120,6 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
                     .add(githubRepository)
                     .build();
         }
-    }
-
-    @Override
-    public Mono<ImmutableSet<GithubRepository>> getBookmarkedRepositories() {
-        return Mono.fromCallable(() -> {
-            final File bookmarkFile = new File(bookmarkFilePath);
-
-            if (!bookmarkFile.exists()) {
-                final boolean fileCreated = bookmarkFile.createNewFile();
-
-                if (!fileCreated) {
-                    throw new IllegalStateException("The bookmark file cannot be created!");
-                }
-
-                //Write empty array into the file after its created.
-                Files.write(bookmarkFile.toPath(), "[]".getBytes());
-                return ImmutableSet.of();
-            } else {
-                final byte[] bookmarkFileBytes = Files.readAllBytes(bookmarkFile.toPath());
-                //TODO: Write a validator of this of the objects of the set as they might get updated by user manually.
-                final ImmutableSet<GithubRepository> repositories = jsonMapper.readValue(bookmarkFileBytes, new TypeReference<>() {});
-
-                return repositories;
-            }
-        });
     }
 
     private Mono<Void> checkIfGitRepository(File repositoryDirectory) {
