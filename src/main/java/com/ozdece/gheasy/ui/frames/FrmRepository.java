@@ -127,7 +127,7 @@ public class FrmRepository extends JFrame {
         final JLabel lblVersion = new JLabel("Version: ");
         final JLabel lblVersionNumber = new JLabel(GheasyApplication.VERSION);
 
-        final Font versionFont = Fonts.fontWithSize(14);
+        final Font versionFont = Fonts.withSize(14);
 
         lblVersionNumber.setFont(versionFont);
         lblVersion.setFont(versionFont);
@@ -140,7 +140,7 @@ public class FrmRepository extends JFrame {
 
 
         lblLoggedInUser.setText(loggedInUserText);
-        lblLoggedInUser.setFont(Fonts.fontWithSize(16));
+        lblLoggedInUser.setFont(Fonts.withSize(16));
 
         tbBottomBar.setLayout(new FlowLayout(FlowLayout.CENTER));
 
