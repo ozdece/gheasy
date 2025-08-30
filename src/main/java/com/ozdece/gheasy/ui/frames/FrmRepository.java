@@ -271,7 +271,7 @@ public class FrmRepository extends JFrame {
     }
 
     private void loadMainDashboard(GithubRepository githubRepository) {
-        final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, githubRepository);
+        final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, githubRepository, githubRepositoryService);
 
         frmMainDashboard.setVisible(true);
         this.dispose();

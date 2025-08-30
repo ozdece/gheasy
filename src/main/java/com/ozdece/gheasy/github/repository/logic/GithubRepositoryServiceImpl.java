@@ -19,6 +19,7 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
     private final ImmutableList<String> gitGithubRepoCheckCommand = ImmutableList.of("git", "remote", "get-url", "origin");
     private final ImmutableList<String> githubRepositoryViewCommand = ImmutableList.of("gh", "repo", "view", "--json",
             "id,createdAt,description,homepageUrl,isArchived,isPrivate,licenseInfo,name,nameWithOwner,owner,primaryLanguage,url,visibility");
+    private final ImmutableList<String> gitCurrentBranchCommand = ImmutableList.of("git", "branch", "--show-current");
 
     private final ProcessService processService;
 
@@ -87,6 +88,14 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
                 return repositories;
             }
         });
+    }
+
+    @Override
+    public Mono<String> getCurrentBranch(File repositoryDirectory) {
+        final ProcessBuilder processBuilder = new ProcessBuilder(gitCurrentBranchCommand)
+                .directory(repositoryDirectory);
+
+        return Mono.fromCallable(() -> processService.getProcessOutput(processBuilder));
     }
 
     private ImmutableSet<GithubRepository> removeBookmark(ImmutableSet<GithubRepository> githubRepositories, GithubRepository githubRepository) {

@@ -162,6 +162,8 @@ class GithubRepositoryServiceSpec extends Specification {
                 .verifyComplete()
     }
 
+    //TODO: Write a test for getBranchName
+
     private static GithubRepository newGithubRepository(String id) {
         return new GithubRepository(
                 id,

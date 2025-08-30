@@ -12,4 +12,5 @@ public interface GithubRepositoryService {
     Mono<GithubRepository> upsertBookmark(GithubRepository githubRepository);
     Mono<ImmutableSet<GithubRepository>> removeBookmark(GithubRepository githubRepository);
     Mono<ImmutableSet<GithubRepository>> getBookmarkedRepositories();
+    Mono<String> getCurrentBranch(File repositoryDirectory);
 }

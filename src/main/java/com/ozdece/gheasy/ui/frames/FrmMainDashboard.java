@@ -3,17 +3,22 @@ package com.ozdece.gheasy.ui.frames;
 import com.ozdece.gheasy.github.auth.model.GithubUser;
 import com.ozdece.gheasy.github.issues.model.IssueStatus;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequestStatus;
+import com.ozdece.gheasy.github.repository.GithubRepositoryService;
 import com.ozdece.gheasy.github.repository.model.GithubRepository;
 import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.ResourceLoader;
+import com.ozdece.gheasy.ui.SwingScheduler;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 
 public class FrmMainDashboard extends JFrame {
 
     private final GithubUser user;
     private final GithubRepository githubRepository;
+
+    private final GithubRepositoryService githubRepositoryService;
 
     private final JTree trRepoNavigator = new JTree();
 
@@ -25,6 +30,7 @@ public class FrmMainDashboard extends JFrame {
 
     private final JLabel lblPullRequestCount = new JLabel("0");
     private final JLabel lblIssuesCount = new JLabel("0");
+    private final JLabel lblBranch = new JLabel("<branch_name>");
 
     private final JTextField txtSearchPullRequest = new JTextField();
     private final JTextField txtSearchIssues = new JTextField();
@@ -34,7 +40,7 @@ public class FrmMainDashboard extends JFrame {
 
     private final JLabel lblLastSyncTime = new JLabel("Last Sync Time: xxx");
 
-    public FrmMainDashboard(GithubUser user, GithubRepository githubRepository) {
+    public FrmMainDashboard(GithubUser user, GithubRepository githubRepository, GithubRepositoryService githubRepositoryService) {
         super(String.format("Gheasy | %s Dashboard, User: %s", githubRepository.nameWithOwner(), user.fullName().orElse(user.username())));
 
         setBounds(250, 250, 1350, 700);
@@ -42,10 +48,13 @@ public class FrmMainDashboard extends JFrame {
 
         this.user = user;
         this.githubRepository = githubRepository;
+        this.githubRepositoryService = githubRepositoryService;
 
         setLayout(new BorderLayout());
         add(buildLeftPanel(), BorderLayout.WEST);
         add(buildCentralPanel(), BorderLayout.CENTER);
+
+        loadDashboardData();
     }
 
     private JComponent buildCentralPanel() {
@@ -56,8 +65,8 @@ public class FrmMainDashboard extends JFrame {
 
         lblOwnerWithName.setFont(Fonts.boldFontWithSize(20));
 
-        final JLabel lblBranch = new JLabel("<branch_name>");
         lblBranch.setFont(Fonts.withSize(14));
+        lblBranch.setForeground(Color.YELLOW.darker());
 
         final JLabel lblPrimaryLanguage = new JLabel(githubRepository.primaryLanguage().name());
         lblPrimaryLanguage.setFont(Fonts.withSize(14));
@@ -93,8 +102,6 @@ public class FrmMainDashboard extends JFrame {
                                 groupLayout.createSequentialGroup()
                                         .addGap(10)
                                         .addComponent(lblOwnerWithName)
-                                        .addGap(23)
-                                        .addComponent(lblBranch)
                                         .addGap(0, 0, Short.MAX_VALUE)
                                         .addComponent(lblPrimaryLanguage)
                                         .addGap(10)
@@ -105,6 +112,8 @@ public class FrmMainDashboard extends JFrame {
                                         .addComponent(lblLastRelease)
                                         .addGap(14)
                                         .addComponent(lblRepoStars)
+                                        .addGap(14)
+                                        .addComponent(lblBranch)
                                         .addGap(0, 0, Short.MAX_VALUE)
                                         .addComponent(lblLicense)
                                         .addGap(10)
@@ -130,7 +139,6 @@ public class FrmMainDashboard extends JFrame {
                         .addGroup(
                                 groupLayout.createParallelGroup(GroupLayout.Alignment.CENTER)
                                         .addComponent(lblOwnerWithName)
-                                        .addComponent(lblBranch)
                                         .addComponent(lblPrimaryLanguage)
                         )
                         .addGap(5)
@@ -138,6 +146,7 @@ public class FrmMainDashboard extends JFrame {
                                 groupLayout.createParallelGroup(GroupLayout.Alignment.CENTER)
                                         .addComponent(lblLastRelease)
                                         .addComponent(lblRepoStars)
+                                        .addComponent(lblBranch)
                                         .addComponent(lblLicense)
                         )
                         .addGap(5)
@@ -326,6 +335,14 @@ public class FrmMainDashboard extends JFrame {
 
         leftPanel.setLayout(groupLayout);
         return leftPanel;
+    }
+
+    private void loadDashboardData() {
+        final File repoDirectory = new File(githubRepository.directoryPath());
+       githubRepositoryService
+               .getCurrentBranch(repoDirectory)
+               .publishOn(SwingScheduler.edt())
+               .subscribe(branchName -> lblBranch.setText(String.format("Active Branch: %s", branchName)));
     }
 
 }
