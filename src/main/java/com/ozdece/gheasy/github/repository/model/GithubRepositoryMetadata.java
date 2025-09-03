@@ -1,8 +1,10 @@
 package com.ozdece.gheasy.github.repository.model;
 
+import java.util.Optional;
+
 public record GithubRepositoryMetadata(
-        LatestRelease latestRelease,
+        Optional<LatestRelease> latestRelease,
         int starCount,
-        String license,
+        Optional<String> license,
         String currentBranch
 ) {}

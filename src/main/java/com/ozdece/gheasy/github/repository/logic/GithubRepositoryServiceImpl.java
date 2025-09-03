@@ -8,6 +8,7 @@ import com.ozdece.gheasy.github.repository.model.GithubRepository;
 import com.ozdece.gheasy.github.repository.GithubRepositoryService;
 import com.ozdece.gheasy.github.repository.model.GithubRepositoryMetadata;
 import com.ozdece.gheasy.github.repository.model.response.GhRepositoryMetadataResponse;
+import com.ozdece.gheasy.github.repository.model.response.LicenseInfo;
 import com.ozdece.gheasy.json.GheasyObjectMapper;
 import com.ozdece.gheasy.process.ProcessService;
 import reactor.core.publisher.Mono;
@@ -100,7 +101,7 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
                 .map(tuple -> new GithubRepositoryMetadata(
                         tuple.getT2().latestRelease(),
                         tuple.getT2().stargazerCount(),
-                        tuple.getT2().licenseInfo().name(),
+                        tuple.getT2().licenseInfo().map(LicenseInfo::name),
                         tuple.getT1())
                 );
     }

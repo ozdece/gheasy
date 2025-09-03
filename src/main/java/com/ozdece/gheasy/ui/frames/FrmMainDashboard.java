@@ -79,19 +79,15 @@ public class FrmMainDashboard extends JFrame {
         lblLicense.setFont(Fonts.withSize(14));
         lblRepoStars.setFont(Fonts.withSize(14));
 
-        ResourceLoader.loadImage("images/star-icon.png")
-                .map(ImageIcon::new)
-                .ifPresent(lblRepoStars::setIcon);
-
-        ResourceLoader.loadImage("images/release-icon.png")
-                .map(ImageIcon::new)
-                .ifPresent(lblLastRelease::setIcon);
-
         final JComponent pullRequestPanel = buildPullRequestPanel();
         final JComponent issuesPanel = buildIssuesPanel();
 
         final JToolBar tbBottomBar = new JToolBar();
         tbBottomBar.setLayout(new FlowLayout(FlowLayout.LEADING));
+
+        ResourceLoader.loadImage("images/star-icon.png")
+                .map(ImageIcon::new)
+                .ifPresent(lblRepoStars::setIcon);
 
         tbBottomBar.add(lblLastSyncTime);
 
@@ -344,10 +340,21 @@ public class FrmMainDashboard extends JFrame {
                 .subscribe(metadata -> {
                     lblBranch.setText(String.format("Active Branch: %s", metadata.currentBranch()));
                     //TODO: Make last release label a HyperLink component
-                    lblLastRelease.setText(String.format("Last Release: %s on %s",
-                            metadata.latestRelease().name(),
-                            ZoneBasedDateTimeFormatter.toFormattedString(metadata.latestRelease().publishedAt())));
-                    lblLicense.setText(String.format("License: %s", metadata.license()));
+
+                    metadata.latestRelease().ifPresent(latestRelease -> {
+                        lblLastRelease.setText(String.format("Last Release: %s on %s",
+                                latestRelease.name(),
+                                ZoneBasedDateTimeFormatter.toFormattedString(latestRelease.publishedAt())));
+
+                        ResourceLoader.loadImage("images/release-icon.png")
+                                .map(ImageIcon::new)
+                                .ifPresent(lblLastRelease::setIcon);
+                    });
+
+                    metadata.license().ifPresent(license -> {
+                        lblLicense.setText(String.format("License: %s", license));
+                    });
+
                     lblRepoStars.setText(String.format("%d stars", metadata.starCount()));
                 });
     }
