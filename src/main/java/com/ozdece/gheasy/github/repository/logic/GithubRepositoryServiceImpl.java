@@ -6,6 +6,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.ozdece.gheasy.github.repository.model.GithubRepository;
 import com.ozdece.gheasy.github.repository.GithubRepositoryService;
+import com.ozdece.gheasy.github.repository.model.GithubRepositoryMetadata;
+import com.ozdece.gheasy.github.repository.model.response.GhRepositoryMetadataResponse;
 import com.ozdece.gheasy.json.GheasyObjectMapper;
 import com.ozdece.gheasy.process.ProcessService;
 import reactor.core.publisher.Mono;
@@ -20,6 +22,7 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
     private final ImmutableList<String> githubRepositoryViewCommand = ImmutableList.of("gh", "repo", "view", "--json",
             "id,createdAt,description,homepageUrl,isArchived,isPrivate,licenseInfo,name,nameWithOwner,owner,primaryLanguage,url,visibility");
     private final ImmutableList<String> gitCurrentBranchCommand = ImmutableList.of("git", "branch", "--show-current");
+    private final ImmutableList<String> ghGetRepoMetadataCommand = ImmutableList.of("gh", "repo", "view", "--json", "latestRelease,licenseInfo,stargazerCount");
 
     private final ProcessService processService;
 
@@ -91,7 +94,25 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
     }
 
     @Override
-    public Mono<String> getCurrentBranch(File repositoryDirectory) {
+    public Mono<GithubRepositoryMetadata> getRepositoryMetadata(File repositoryDirectory) {
+        return getCurrentBranch(repositoryDirectory)
+                .zipWith(getRepositoryMetadataResponse(repositoryDirectory))
+                .map(tuple -> new GithubRepositoryMetadata(
+                        tuple.getT2().latestRelease(),
+                        tuple.getT2().stargazerCount(),
+                        tuple.getT2().licenseInfo().name(),
+                        tuple.getT1())
+                );
+    }
+
+    private Mono<GhRepositoryMetadataResponse> getRepositoryMetadataResponse(File repositoryDirectory) {
+       final ProcessBuilder processBuilder = new ProcessBuilder(ghGetRepoMetadataCommand)
+               .directory(repositoryDirectory);
+
+       return Mono.fromCallable(() -> processService.getThenParseProcessOutput(processBuilder, GhRepositoryMetadataResponse.class));
+    }
+
+    private Mono<String> getCurrentBranch(File repositoryDirectory) {
         final ProcessBuilder processBuilder = new ProcessBuilder(gitCurrentBranchCommand)
                 .directory(repositoryDirectory);
 

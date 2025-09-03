@@ -1,5 +1,6 @@
 package com.ozdece.gheasy.ui.frames;
 
+import com.ozdece.gheasy.datetime.ZoneBasedDateTimeFormatter;
 import com.ozdece.gheasy.github.auth.model.GithubUser;
 import com.ozdece.gheasy.github.issues.model.IssueStatus;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequestStatus;
@@ -31,6 +32,10 @@ public class FrmMainDashboard extends JFrame {
     private final JLabel lblPullRequestCount = new JLabel("0");
     private final JLabel lblIssuesCount = new JLabel("0");
     private final JLabel lblBranch = new JLabel("<branch_name>");
+    private final JLabel lblLastSyncTime = new JLabel("Last Sync Time: xxx");
+    private final JLabel lblLastRelease = new JLabel();
+    private final JLabel lblLicense = new JLabel();
+    private final JLabel lblRepoStars = new JLabel();
 
     private final JTextField txtSearchPullRequest = new JTextField();
     private final JTextField txtSearchIssues = new JTextField();
@@ -38,7 +43,6 @@ public class FrmMainDashboard extends JFrame {
     private final JTable tblPullRequests = new JTable();
     private final JTable tblIssues = new JTable();
 
-    private final JLabel lblLastSyncTime = new JLabel("Last Sync Time: xxx");
 
     public FrmMainDashboard(GithubUser user, GithubRepository githubRepository, GithubRepositoryService githubRepositoryService) {
         super(String.format("Gheasy | %s Dashboard, User: %s", githubRepository.nameWithOwner(), user.fullName().orElse(user.username())));
@@ -71,13 +75,8 @@ public class FrmMainDashboard extends JFrame {
         final JLabel lblPrimaryLanguage = new JLabel(githubRepository.primaryLanguage().name());
         lblPrimaryLanguage.setFont(Fonts.withSize(14));
 
-        final JLabel lblLastRelease = new JLabel("Last Release: <value>");
         lblLastRelease.setFont(Fonts.withSize(14));
-
-        final JLabel lblLicense = new JLabel("License: <value>");
         lblLicense.setFont(Fonts.withSize(14));
-
-        final JLabel lblRepoStars = new JLabel("xxx stars");
         lblRepoStars.setFont(Fonts.withSize(14));
 
         ResourceLoader.loadImage("images/star-icon.png")
@@ -339,10 +338,18 @@ public class FrmMainDashboard extends JFrame {
 
     private void loadDashboardData() {
         final File repoDirectory = new File(githubRepository.directoryPath());
-       githubRepositoryService
-               .getCurrentBranch(repoDirectory)
-               .publishOn(SwingScheduler.edt())
-               .subscribe(branchName -> lblBranch.setText(String.format("Active Branch: %s", branchName)));
+        githubRepositoryService
+                .getRepositoryMetadata(repoDirectory)
+                .publishOn(SwingScheduler.edt())
+                .subscribe(metadata -> {
+                    lblBranch.setText(String.format("Active Branch: %s", metadata.currentBranch()));
+                    //TODO: Make last release label a HyperLink component
+                    lblLastRelease.setText(String.format("Last Release: %s on %s",
+                            metadata.latestRelease().name(),
+                            ZoneBasedDateTimeFormatter.toFormattedString(metadata.latestRelease().publishedAt())));
+                    lblLicense.setText(String.format("License: %s", metadata.license()));
+                    lblRepoStars.setText(String.format("%d stars", metadata.starCount()));
+                });
     }
 
 }

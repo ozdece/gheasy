@@ -12,7 +12,6 @@ public record GithubRepository(
         String url,
         RepositoryOwner owner,
         ZonedDateTime createdAt,
-        Optional<LicenseInfo> licenseInfo,
         PrimaryLanguage primaryLanguage,
         RepositoryVisibility visibility,
         boolean isArchived
@@ -27,7 +26,6 @@ public record GithubRepository(
                 url,
                 owner,
                 createdAt,
-                licenseInfo,
                 primaryLanguage,
                 visibility,
                 isArchived
