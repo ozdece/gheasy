@@ -77,7 +77,6 @@ class InMemoryProcessService implements ProcessService {
                 "https://example.com",
                 new RepositoryOwner("id", "ozdece"),
                 ZonedDateTime.now(),
-                Optional.empty(),
                 new PrimaryLanguage("Java"),
                 RepositoryVisibility.PUBLIC,
                 false
