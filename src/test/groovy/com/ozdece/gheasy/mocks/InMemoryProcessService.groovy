@@ -7,6 +7,7 @@ import com.ozdece.gheasy.github.repository.model.GithubRepository
 import com.ozdece.gheasy.github.repository.model.PrimaryLanguage
 import com.ozdece.gheasy.github.repository.model.RepositoryOwner
 import com.ozdece.gheasy.github.repository.model.RepositoryVisibility
+import com.ozdece.gheasy.github.repository.model.response.GhRepositoryMetadataResponse
 import com.ozdece.gheasy.process.ProcessResponse
 import com.ozdece.gheasy.process.ProcessService
 
@@ -28,14 +29,19 @@ class InMemoryProcessService implements ProcessService {
     @Override
     String getProcessOutput(ProcessBuilder processBuilder) throws IOException, InterruptedException {
         final String command = processBuilder.command().stream().collect(Collectors.joining(" "))
+        final String processDirectory = processBuilder.directory().getAbsolutePath()
 
         return switch (command) {
             case "git remote get-url origin" -> {
-                final String processDirectory = processBuilder.directory().getAbsolutePath()
                 if (processDirectory == GithubRepositoryServiceSpec.VALID_GITHUB_REPO_PATH) {
                     "git@github.com"
                 }
                 else null
+            }
+            case "git branch --show-current" -> {
+                if (processDirectory == GithubRepositoryServiceSpec.VALID_GITHUB_REPO_PATH) {
+                    "master"
+                } else null
             }
         }
     }
@@ -62,6 +68,9 @@ class InMemoryProcessService implements ProcessService {
             case "gh repo view --json id,createdAt,description,homepageUrl,isArchived,isPrivate," +
                     "licenseInfo,name,nameWithOwner,owner,primaryLanguage,url,visibility" -> {
                 (T) newGithubRepository("id")
+            }
+            case "gh repo view --json latestRelease,licenseInfo,stargazerCount" -> {
+                (T) new GhRepositoryMetadataResponse(Optional.empty(), Optional.empty(), 1)
             }
             default -> null
         }

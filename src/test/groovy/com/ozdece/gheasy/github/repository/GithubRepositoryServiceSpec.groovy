@@ -3,6 +3,7 @@ package com.ozdece.gheasy.github.repository
 import com.google.common.collect.ImmutableSet
 import com.ozdece.gheasy.github.repository.logic.GithubRepositoryServiceImpl
 import com.ozdece.gheasy.github.repository.model.GithubRepository
+import com.ozdece.gheasy.github.repository.model.GithubRepositoryMetadata
 import com.ozdece.gheasy.github.repository.model.PrimaryLanguage
 import com.ozdece.gheasy.github.repository.model.RepositoryOwner
 import com.ozdece.gheasy.github.repository.model.RepositoryVisibility
@@ -73,7 +74,7 @@ class GithubRepositoryServiceSpec extends Specification {
         expect:
         StepVerifier
         .create(githubRepositoryService.get(new File(VALID_GITHUB_REPO_PATH)))
-        .assertNext {repo -> repo.id() == "id"}
+        .assertNext {repo -> assert repo.id() == "id"}
         .verifyComplete()
     }
 
@@ -86,13 +87,13 @@ class GithubRepositoryServiceSpec extends Specification {
 
         then: 'A new bookmark is added'
         StepVerifier.create(result)
-                .assertNext {gr -> gr.id() == "new-id"}
+                .assertNext {gr -> assert gr.id() == "new-id"}
                 .verifyComplete()
 
         StepVerifier.create(githubRepositoryService.getBookmarkedRepositories())
         .assertNext { bookmarks ->
-            bookmarks.size() == 1
-            bookmarks.toList().get(0).id() == "new-id"
+            assert bookmarks.size() == 1
+            assert bookmarks.toList().get(0).id() == "new-id"
         }
         .verifyComplete()
     }
@@ -103,7 +104,7 @@ class GithubRepositoryServiceSpec extends Specification {
 
         and: 'A new github repository is being bookmarked'
         StepVerifier.create(githubRepositoryService.upsertBookmark(githubRepository))
-                .assertNext {gr -> gr.id() == "new-id"}
+                .assertNext {gr -> assert gr.id() == "new-id"}
                 .verifyComplete()
 
         when: 'An existing bookmark is being updated'
@@ -112,13 +113,16 @@ class GithubRepositoryServiceSpec extends Specification {
 
         then: 'The bookmark is updated successfully'
         StepVerifier.create(result)
-                .assertNext {gr -> gr.id() == "new-id" && gr.directoryPath() == "directory_path"}
+                .assertNext {gr ->
+                    assert gr.id() == "new-id"
+                    assert gr.directoryPath() == "directory_path"
+                }
                 .verifyComplete()
 
         StepVerifier.create(githubRepositoryService.getBookmarkedRepositories())
                 .assertNext { bookmarks ->
-                    bookmarks.size() == 1
-                    bookmarks.toList().get(0).id() == "new-id"
+                    assert bookmarks.size() == 1
+                    assert bookmarks.toList().get(0).id() == "new-id"
                 }
                 .verifyComplete()
     }
@@ -130,13 +134,13 @@ class GithubRepositoryServiceSpec extends Specification {
         and: 'A new github repository is being bookmarked'
         Mono<GithubRepository> upsertResult = githubRepositoryService.upsertBookmark(githubRepository)
         StepVerifier.create(upsertResult)
-                .assertNext {gr -> gr.id() == "new-id"}
+                .assertNext {gr -> assert gr.id() == "new-id"}
                 .verifyComplete()
 
         StepVerifier.create(githubRepositoryService.getBookmarkedRepositories())
                 .assertNext { bookmarks ->
-                    bookmarks.size() == 1
-                    bookmarks.toList().get(0).id() == "new-id"
+                    assert bookmarks.size() == 1
+                    assert bookmarks.toList().get(0).id() == "new-id"
                 }
                 .verifyComplete()
 
@@ -145,7 +149,7 @@ class GithubRepositoryServiceSpec extends Specification {
 
         then: 'The existing bookmark is removed'
         StepVerifier.create(removeResult)
-        .assertNext {bookmarks -> bookmarks.isEmpty()}
+        .assertNext {bookmarks -> assert bookmarks.isEmpty()}
         .verifyComplete()
     }
 
@@ -158,11 +162,22 @@ class GithubRepositoryServiceSpec extends Specification {
 
         then: 'ImmutableSet should remain as-is with successful complete'
         StepVerifier.create(result)
-                .assertNext {bookmarks -> bookmarks.isEmpty()}
+                .assertNext {bookmarks -> assert bookmarks.isEmpty()}
                 .verifyComplete()
     }
 
-    //TODO: Write a test for getBranchName
+    def "should retrieve the repository metadata successfully"() {
+        when: 'trying to fetch the Github repository metadata'
+        Mono<GithubRepositoryMetadata> metadataRepository = githubRepositoryService.getRepositoryMetadata(new File(VALID_GITHUB_REPO_PATH));
+
+        then: 'Metadata should be retrieved successfully'
+        StepVerifier.create(metadataRepository)
+        .assertNext {metadata ->
+            assert metadata.currentBranch() == "master"
+            assert metadata.starCount() == 1
+        }
+        .verifyComplete()
+    }
 
     private static GithubRepository newGithubRepository(String id) {
         return new GithubRepository(
