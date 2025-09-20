@@ -1,10 +1,12 @@
 package com.ozdece.gheasy;
 
-import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLightLaf;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.ozdece.gheasy.github.auth.GhAuthService;
 import com.ozdece.gheasy.github.auth.logic.GhAuthServiceImpl;
+import com.ozdece.gheasy.github.pullrequest.PullRequestService;
+import com.ozdece.gheasy.github.pullrequest.logic.PullRequestServiceImpl;
 import com.ozdece.gheasy.github.repository.GithubRepositoryService;
 import com.ozdece.gheasy.github.repository.logic.GithubRepositoryServiceImpl;
 import com.ozdece.gheasy.image.ImageService;
@@ -37,12 +39,14 @@ public class GheasyApplication {
     private static final GhAuthService ghAuthService = new GhAuthServiceImpl(processService);
     private static final ImageService imageService = new ImageServiceImpl(processService, appConfig);
     private static final GithubRepositoryService githubRepositoryService = new GithubRepositoryServiceImpl(processService, GheasyApplication.CONFIG_FOLDER_PATH);
+    private static final PullRequestService pullRequestService = new PullRequestServiceImpl(processService);
 
     private static final ImmutableSet<String> MANDATORY_APPS_TO_BE_PRESENT = ImmutableSet.of("git", "gh");
 
     public static void main(String[] args) {
         //Set up the theme
-        FlatDarkLaf.setup();
+        FlatLightLaf.setup();
+
         final File configFolder = new File(CONFIG_FOLDER_PATH);
 
         if (!configFolder.exists()) {
@@ -81,7 +85,7 @@ public class GheasyApplication {
                     System.exit(1);
                 })
                 .subscribe(githubUser -> {
-                    final FrmRepository frmRepository = new FrmRepository(imageService, githubRepositoryService, githubUser);
+                    final FrmRepository frmRepository = new FrmRepository(imageService, githubRepositoryService, pullRequestService, githubUser);
                     frmRepository.updateGithubAvatar();
                     frmRepository.setVisible(true);
                 });

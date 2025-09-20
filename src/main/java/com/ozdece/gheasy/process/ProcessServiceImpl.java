@@ -1,5 +1,6 @@
 package com.ozdece.gheasy.process;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.ozdece.gheasy.json.GheasyObjectMapper;
 import org.slf4j.Logger;
@@ -19,6 +20,11 @@ public class ProcessServiceImpl implements ProcessService {
     @Override
     public <T> T getThenParseProcessOutput(ProcessBuilder processBuilder, Class<T> resultObjectClass) throws IOException, InterruptedException {
         return defaultJsonMapper.readValue(getProcessOutputBytes(processBuilder), resultObjectClass);
+    }
+
+    @Override
+    public <T> T getThenParseProcessOutput(ProcessBuilder processBuilder, TypeReference<T> typeReference) throws IOException, InterruptedException {
+        return defaultJsonMapper.readValue(getProcessOutputBytes(processBuilder), typeReference);
     }
 
     @Override

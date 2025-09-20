@@ -3,12 +3,15 @@ package com.ozdece.gheasy.ui.frames;
 import com.ozdece.gheasy.datetime.ZoneBasedDateTimeFormatter;
 import com.ozdece.gheasy.github.auth.model.GithubUser;
 import com.ozdece.gheasy.github.issues.model.IssueStatus;
+import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequestStatus;
 import com.ozdece.gheasy.github.repository.GithubRepositoryService;
 import com.ozdece.gheasy.github.repository.model.GithubRepository;
 import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.ResourceLoader;
 import com.ozdece.gheasy.ui.SwingScheduler;
+import com.ozdece.gheasy.ui.models.PullRequestsTableModel;
+import reactor.core.scheduler.Schedulers;
 
 import javax.swing.*;
 import java.awt.*;
@@ -20,6 +23,7 @@ public class FrmMainDashboard extends JFrame {
     private final GithubRepository githubRepository;
 
     private final GithubRepositoryService githubRepositoryService;
+    private final PullRequestService pullRequestService;
 
     private final JTree trRepoNavigator = new JTree();
 
@@ -44,7 +48,12 @@ public class FrmMainDashboard extends JFrame {
     private final JTable tblIssues = new JTable();
 
 
-    public FrmMainDashboard(GithubUser user, GithubRepository githubRepository, GithubRepositoryService githubRepositoryService) {
+    public FrmMainDashboard(
+            GithubUser user,
+            GithubRepository githubRepository,
+            GithubRepositoryService githubRepositoryService,
+            PullRequestService pullRequestService
+    ) {
         super(String.format("Gheasy | %s Dashboard, User: %s", githubRepository.nameWithOwner(), user.fullName().orElse(user.username())));
 
         setBounds(250, 250, 1350, 700);
@@ -53,6 +62,7 @@ public class FrmMainDashboard extends JFrame {
         this.user = user;
         this.githubRepository = githubRepository;
         this.githubRepositoryService = githubRepositoryService;
+        this.pullRequestService = pullRequestService;
 
         setLayout(new BorderLayout());
         add(buildLeftPanel(), BorderLayout.WEST);
@@ -337,6 +347,7 @@ public class FrmMainDashboard extends JFrame {
         githubRepositoryService
                 .getRepositoryMetadata(repoDirectory)
                 .publishOn(SwingScheduler.edt())
+                .subscribeOn(Schedulers.boundedElastic())
                 .subscribe(metadata -> {
                     lblBranch.setText(String.format("Active Branch: %s", metadata.currentBranch()));
                     //TODO: Make last release label a HyperLink component
@@ -356,6 +367,13 @@ public class FrmMainDashboard extends JFrame {
                     });
 
                     lblRepoStars.setText(String.format("%d stars", metadata.starCount()));
+                });
+
+        pullRequestService.getPullRequests(repoDirectory)
+                .subscribeOn(Schedulers.boundedElastic())
+                .publishOn(SwingScheduler.edt())
+                .subscribe(pullRequests -> {
+                    tblPullRequests.setModel(new PullRequestsTableModel(pullRequests));
                 });
     }
 

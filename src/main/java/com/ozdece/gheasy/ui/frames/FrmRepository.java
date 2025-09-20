@@ -2,6 +2,7 @@ package com.ozdece.gheasy.ui.frames;
 
 import com.ozdece.gheasy.GheasyApplication;
 import com.ozdece.gheasy.github.auth.model.GithubUser;
+import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.repository.model.GithubRepository;
 import com.ozdece.gheasy.github.repository.GithubRepositoryService;
 import com.ozdece.gheasy.image.ImageService;
@@ -40,14 +41,21 @@ public class FrmRepository extends JFrame {
 
     private final ImageService imageService;
     private final GithubRepositoryService githubRepositoryService;
+    private final PullRequestService pullRequestService;
 
     private static final Logger logger = LoggerFactory.getLogger(FrmRepository.class);
 
-    public FrmRepository(ImageService imageService, GithubRepositoryService githubRepositoryService, GithubUser githubUser) {
+    public FrmRepository(
+            ImageService imageService,
+            GithubRepositoryService githubRepositoryService,
+            PullRequestService pullRequestService,
+            GithubUser githubUser
+    ) {
         super("Gheasy | User: " + githubUser.username());
         this.githubUser = githubUser;
         this.githubRepositoryService = githubRepositoryService;
         this.imageService = imageService;
+        this.pullRequestService = pullRequestService;
 
         setupFrame();
         loadBookmarkedRepositories();
@@ -271,7 +279,7 @@ public class FrmRepository extends JFrame {
     }
 
     private void loadMainDashboard(GithubRepository githubRepository) {
-        final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, githubRepository, githubRepositoryService);
+        final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, githubRepository, githubRepositoryService, pullRequestService);
 
         frmMainDashboard.setVisible(true);
         this.dispose();
