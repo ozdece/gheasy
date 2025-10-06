@@ -18,13 +18,6 @@ import java.nio.file.Files;
 
 public class GithubRepositoryServiceImpl implements GithubRepositoryService {
 
-    private final ImmutableList<String> gitLocalRepoCheckCommand = ImmutableList.of("git", "rev-parse", "--is-inside-work-tree");
-    private final ImmutableList<String> gitGithubRepoCheckCommand = ImmutableList.of("git", "remote", "get-url", "origin");
-    private final ImmutableList<String> githubRepositoryViewCommand = ImmutableList.of("gh", "repo", "view", "--json",
-            "id,createdAt,description,homepageUrl,isArchived,isPrivate,licenseInfo,name,nameWithOwner,owner,primaryLanguage,url,visibility");
-    private final ImmutableList<String> gitCurrentBranchCommand = ImmutableList.of("git", "branch", "--show-current");
-    private final ImmutableList<String> ghGetRepoMetadataCommand = ImmutableList.of("gh", "repo", "view", "--json", "latestRelease,licenseInfo,stargazerCount");
-
     private final ProcessService processService;
 
     private final String bookmarkFilePath;
@@ -34,22 +27,6 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
     public GithubRepositoryServiceImpl(ProcessService processService, String configFolderPath) {
         this.processService = processService;
         bookmarkFilePath = configFolderPath + "/bookmarks.json";
-    }
-
-    @Override
-    public Mono<Void> isGitHubRepo(File repositoryDirectory) {
-        return checkIfGitRepository(repositoryDirectory)
-                .then(checkIfGithubRepository(repositoryDirectory))
-                .then();
-    }
-
-    @Override
-    public Mono<GithubRepository> get(File repositoryDirectory) {
-        final ProcessBuilder processBuilder = new ProcessBuilder(githubRepositoryViewCommand)
-                .directory(repositoryDirectory);
-
-        return Mono.fromCallable(() -> processService.getThenParseProcessOutput(processBuilder, GithubRepository.class)
-                .withDirectoryPath(repositoryDirectory.getAbsolutePath()));
     }
 
     @Override
@@ -95,29 +72,19 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
     }
 
     @Override
-    public Mono<GithubRepositoryMetadata> getRepositoryMetadata(File repositoryDirectory) {
-        return getCurrentBranch(repositoryDirectory)
-                .zipWith(getRepositoryMetadataResponse(repositoryDirectory))
-                .map(tuple -> new GithubRepositoryMetadata(
-                        tuple.getT2().latestRelease(),
-                        tuple.getT2().stargazerCount(),
-                        tuple.getT2().licenseInfo().map(LicenseInfo::name),
-                        tuple.getT1())
+    public Mono<GithubRepositoryMetadata> getRepositoryMetadata(String repository) {
+        return getRepositoryMetadataResponse(repository)
+                .map(response -> new GithubRepositoryMetadata(
+                        response.latestRelease(),
+                        response.stargazerCount(),
+                        response.licenseInfo().map(LicenseInfo::name))
                 );
     }
 
-    private Mono<GhRepositoryMetadataResponse> getRepositoryMetadataResponse(File repositoryDirectory) {
-       final ProcessBuilder processBuilder = new ProcessBuilder(ghGetRepoMetadataCommand)
-               .directory(repositoryDirectory);
+    private Mono<GhRepositoryMetadataResponse> getRepositoryMetadataResponse(String repository) {
+       final ProcessBuilder processBuilder = new ProcessBuilder(getGhGetRepoMetadataCommand(repository));
 
        return Mono.fromCallable(() -> processService.getThenParseProcessOutput(processBuilder, GhRepositoryMetadataResponse.class));
-    }
-
-    private Mono<String> getCurrentBranch(File repositoryDirectory) {
-        final ProcessBuilder processBuilder = new ProcessBuilder(gitCurrentBranchCommand)
-                .directory(repositoryDirectory);
-
-        return Mono.fromCallable(() -> processService.getProcessOutput(processBuilder));
     }
 
     private ImmutableSet<GithubRepository> removeBookmark(ImmutableSet<GithubRepository> githubRepositories, GithubRepository githubRepository) {
@@ -152,24 +119,8 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
         }
     }
 
-    private Mono<Void> checkIfGitRepository(File repositoryDirectory) {
-        final ProcessBuilder gitLocalRepoCheckProcess = new ProcessBuilder(gitLocalRepoCheckCommand)
-                .directory(repositoryDirectory);
-
-        return Mono.fromCallable(() -> processService.getThenParseProcessOutput(gitLocalRepoCheckProcess, Boolean.class))
-                .filter(isGitRepo -> isGitRepo)
-                .switchIfEmpty(Mono.error(new IllegalStateException("Unexpected response retrieved from git command while checking the local git repository.")))
-                .then();
-    }
-
-    private Mono<Void> checkIfGithubRepository(File repositoryDirectory) {
-        final ProcessBuilder gitGithubRepoCheckProcess = new ProcessBuilder(gitGithubRepoCheckCommand)
-                .directory(repositoryDirectory);
-
-        return Mono.fromCallable(() -> processService.getProcessOutput(gitGithubRepoCheckProcess))
-                .filter(commandOutput -> commandOutput.contains("github.com"))
-                .switchIfEmpty(Mono.error(new IllegalStateException("Unexpected response retrieved from git command while checking the local git repository.")))
-                .then();
+    private ImmutableList<String> getGhGetRepoMetadataCommand(String repository) {
+        return ImmutableList.of("gh", "repo", "view", repository, "--json", "latestRelease,licenseInfo,stargazerCount");
     }
 
 }

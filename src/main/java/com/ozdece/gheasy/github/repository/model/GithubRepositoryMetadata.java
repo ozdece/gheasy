@@ -5,6 +5,5 @@ import java.util.Optional;
 public record GithubRepositoryMetadata(
         Optional<LatestRelease> latestRelease,
         int starCount,
-        Optional<String> license,
-        String currentBranch
+        Optional<String> license
 ) {}

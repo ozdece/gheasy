@@ -7,6 +7,7 @@ import reactor.core.publisher.Mono;
 import java.io.File;
 
 public interface PullRequestService {
-    Mono<ImmutableList<PullRequest>> getPullRequests(File repositoryDirectory);
+    Mono<ImmutableList<PullRequest>> getPullRequests(String repository);
+    Mono<Integer> getAssignedPullRequestCount(String repository);
 
 }

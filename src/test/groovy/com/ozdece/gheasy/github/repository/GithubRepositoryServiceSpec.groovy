@@ -46,38 +46,6 @@ class GithubRepositoryServiceSpec extends Specification {
 
     }
 
-    def "should fail if a folder is not a git repository folder"() {
-        expect:
-        StepVerifier
-                .create(githubRepositoryService.isGitHubRepo(new File(INVALID_GIT_REPO_PATH)))
-                .expectErrorMatches {err -> err.getMessage() == "Unexpected response retrieved from git command while checking the local git repository."}
-                .verify()
-    }
-
-    def "should fail if a folder is a git repository but not a GitHub repository"() {
-        expect:
-        StepVerifier
-                .create(githubRepositoryService.isGitHubRepo(new File(INVALID_GITHUB_REPO_PATH)))
-                .expectErrorMatches {err -> err.getMessage() == "Unexpected response retrieved from git command while checking the local git repository."}
-                .verify()
-    }
-
-    def "should validate if a folder is a github repository folder"() {
-        expect:
-        StepVerifier
-                .create(githubRepositoryService.isGitHubRepo(new File(VALID_GITHUB_REPO_PATH)))
-                .expectComplete()
-                .verify()
-    }
-
-    def "should get Github repository details via directory"() {
-        expect:
-        StepVerifier
-        .create(githubRepositoryService.get(new File(VALID_GITHUB_REPO_PATH)))
-        .assertNext {repo -> assert repo.id() == "id"}
-        .verifyComplete()
-    }
-
     def "should add a new bookmark if it doesn't exist"() {
         given: 'A new GithubRepository'
         final GithubRepository githubRepository = newGithubRepository("new-id")
