@@ -1,5 +1,6 @@
 package com.ozdece.gheasy.mocks
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.ozdece.gheasy.github.auth.model.GithubUser
 import com.ozdece.gheasy.github.auth.model.UserType
 import com.ozdece.gheasy.github.repository.GithubRepositoryServiceSpec
@@ -19,6 +20,11 @@ class InMemoryProcessService implements ProcessService {
     @Override
     <T> T getThenParseProcessOutput(ProcessBuilder processBuilder, Class<T> resultObjectClass) throws IOException, InterruptedException {
         return mockParseResult(processBuilder, resultObjectClass, ProcessResponse.CLI)
+    }
+
+    @Override
+    <T> T getThenParseProcessOutput(ProcessBuilder processBuilder, TypeReference<T> typeReference) throws IOException, InterruptedException {
+        return mockParseResult(processBuilder, typeReference.getClass(), ProcessResponse.CLI)
     }
 
     @Override

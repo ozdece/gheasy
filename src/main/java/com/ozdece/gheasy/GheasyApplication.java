@@ -13,7 +13,7 @@ import com.ozdece.gheasy.image.ImageService;
 import com.ozdece.gheasy.image.logic.ImageServiceImpl;
 import com.ozdece.gheasy.process.ProcessService;
 import com.ozdece.gheasy.process.ProcessServiceImpl;
-import com.ozdece.gheasy.ui.frames.FrmRepository;
+import com.ozdece.gheasy.ui.frames.FrmMainDashboard;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.slf4j.Logger;
@@ -85,9 +85,8 @@ public class GheasyApplication {
                     System.exit(1);
                 })
                 .subscribe(githubUser -> {
-                    final FrmRepository frmRepository = new FrmRepository(imageService, githubRepositoryService, pullRequestService, githubUser);
-                    frmRepository.updateGithubAvatar();
-                    frmRepository.setVisible(true);
+                    final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, githubRepositoryService, pullRequestService, imageService);
+                    frmMainDashboard.setVisible(true);
                 });
 
     }
