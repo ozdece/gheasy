@@ -3,8 +3,9 @@ package com.ozdece.gheasy.ui.frames;
 import com.ozdece.gheasy.github.auth.model.GithubUser;
 import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequestStatus;
-import com.ozdece.gheasy.github.repository.GithubRepositoryService;
-import com.ozdece.gheasy.github.repository.model.GithubRepository;
+import com.ozdece.gheasy.github.repository.RepositoryService;
+import com.ozdece.gheasy.github.repository.model.Repository;
+import com.ozdece.gheasy.github.repository.model.RepositoryStats;
 import com.ozdece.gheasy.image.ImageService;
 import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.ResourceLoader;
@@ -22,13 +23,13 @@ public class FrmMainDashboard extends JFrame {
 
     private final GithubUser githubUser;
 
-    private final GithubRepositoryService githubRepositoryService;
+    private final RepositoryService repositoryService;
     private final PullRequestService pullRequestService;
     private final ImageService imageService;
 
     private final JTree trRepoNavigator = new JTree();
 
-    private final JComboBox<GithubRepository> cmbGithubRepositories = new JComboBox<>();
+    private final JComboBox<Repository> cmbGithubRepositories = new JComboBox<>();
     private final JComboBox<PullRequestStatus> chbActivePassivePRs = new JComboBox<>();
     private final JComboBox<String> chbPullRequestLabels = new JComboBox<>();
 
@@ -50,7 +51,7 @@ public class FrmMainDashboard extends JFrame {
 
     public FrmMainDashboard(
             GithubUser githubUser,
-            GithubRepositoryService githubRepositoryService,
+            RepositoryService repositoryService,
             PullRequestService pullRequestService,
             ImageService imageService
     ) {
@@ -60,7 +61,7 @@ public class FrmMainDashboard extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         this.githubUser = githubUser;
-        this.githubRepositoryService = githubRepositoryService;
+        this.repositoryService = repositoryService;
         this.pullRequestService = pullRequestService;
         this.imageService = imageService;
 
@@ -302,19 +303,23 @@ public class FrmMainDashboard extends JFrame {
     }
 
     private void loadNavigatorTreeModel() {
-        githubRepositoryService.getBookmarkedRepositories()
+        repositoryService.getBookmarkedRepositories()
                 .publishOn(SwingScheduler.edt())
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe(githubRepositories -> {
                     final GithubRepositoryTreeModel model = new GithubRepositoryTreeModel(githubRepositories);
                     trRepoNavigator.setModel(model);
                     trRepoNavigator.setCellRenderer(new GithubRepositoryTreeRenderer());
+
+                    final Repository repository = githubRepositories.stream().findAny().get();
+
+                    model.updateRepositoryStats(trRepoNavigator, repository, new RepositoryStats(1, 5));
                 });
     }
 
     private void loadDashboardData() {
     //    final File repoDirectory = new File(githubRepository.directoryPath());
-    //    githubRepositoryService
+    //    repositoryService
     //            .getRepositoryMetadata(repoDirectory)
     //            .publishOn(SwingScheduler.edt())
     //            .subscribeOn(Schedulers.boundedElastic())

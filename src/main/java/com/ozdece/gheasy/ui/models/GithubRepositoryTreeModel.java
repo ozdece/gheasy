@@ -1,10 +1,14 @@
 package com.ozdece.gheasy.ui.models;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.ozdece.gheasy.github.repository.model.GithubRepository;
+import com.ozdece.gheasy.github.repository.model.Repository;
 import com.ozdece.gheasy.github.repository.model.RepositoryOwner;
+import com.ozdece.gheasy.github.repository.model.RepositoryStats;
 import com.ozdece.gheasy.ui.models.tree.*;
 
+import javax.swing.*;
+import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
@@ -15,10 +19,10 @@ import java.util.stream.Collectors;
 
 public class GithubRepositoryTreeModel implements TreeModel {
 
-    private final GithubRepositoryTreeNode root;
+    private final RootRepositoryNode root;
     private final List<TreeModelListener> treeModelListeners = new ArrayList<>();
 
-    public GithubRepositoryTreeModel(ImmutableSet<GithubRepository> githubRepositories) {
+    public GithubRepositoryTreeModel(ImmutableSet<Repository> githubRepositories) {
        this.root = this.buildRepositoryTree(githubRepositories);
     }
 
@@ -82,13 +86,43 @@ public class GithubRepositoryTreeModel implements TreeModel {
         treeModelListeners.remove(l);
     }
 
+    public void updateRepositoryStats(JComponent updaterComponent, Repository repository, RepositoryStats repositoryStats) {
+       List<GithubRepositoryTreeNode> pathList = new ArrayList<>(5);
+       pathList.add(root);
+
+       for (int i = 0 ; i < root.getOwners().size(); i++) {
+           final OwnerTreeNode ownerNode = root.getOwners().get(i);
+
+           final ImmutableList<RepositoryTreeNode> repoNodes = ownerNode.getRepositories();
+
+           for (int j = 0 ; j < repoNodes.size(); j++) {
+               final RepositoryTreeNode repositoryTreeNode = repoNodes.get(j);
+
+               if (repositoryTreeNode.getGithubRepository().equals(repository)) {
+                   repositoryTreeNode.setRepositoryStats(repositoryStats);
+
+                   pathList.add(ownerNode);
+                   pathList.add(repositoryTreeNode);
+
+                   final TreeModelEvent treeModelEvent = new TreeModelEvent(updaterComponent, pathList.toArray());
+
+                   treeModelListeners
+                           .forEach(listener -> listener.treeNodesChanged(treeModelEvent));
+                   return;
+               }
+           }
+
+       }
+
+    }
+
     @Override
     public void valueForPathChanged(TreePath path, Object newValue) {}
 
-    private GithubRepositoryTreeNode buildRepositoryTree(ImmutableSet<GithubRepository> githubRepositories) {
-        final Map<RepositoryOwner, ImmutableSet<GithubRepository>> repositoryMap = githubRepositories.stream()
+    private RootRepositoryNode buildRepositoryTree(ImmutableSet<Repository> githubRepositories) {
+        final Map<RepositoryOwner, ImmutableSet<Repository>> repositoryMap = githubRepositories.stream()
                 .collect(Collectors.groupingBy(
-                        GithubRepository::owner,
+                        Repository::owner,
                         ImmutableSet.toImmutableSet()));
 
         return new RootRepositoryNode(repositoryMap);

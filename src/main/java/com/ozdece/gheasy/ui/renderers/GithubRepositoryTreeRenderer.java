@@ -25,8 +25,8 @@ public class GithubRepositoryTreeRenderer implements TreeCellRenderer {
             }
             case RepositoryTreeNodeLeaf leaf -> {
                 final String text = switch (leaf.getType()) {
-                    case PULL_REQUEST -> "Pull Requests (0)";
-                    case ISSUE -> "Issues (0)";
+                    case PULL_REQUEST -> "Pull Requests (%d)".formatted(leaf.repositoryTreeNode().getRepositoryStats().pullRequestCount());
+                    case ISSUE -> "Issues (%d)".formatted(leaf.repositoryTreeNode().getRepositoryStats().issuesCount());
                     default -> "";
                 };
 

@@ -1,10 +1,10 @@
 package com.ozdece.gheasy.github.repository
 
 import com.google.common.collect.ImmutableSet
-import com.ozdece.gheasy.github.repository.logic.GithubRepositoryServiceImpl
-import com.ozdece.gheasy.github.repository.model.GithubRepository
-import com.ozdece.gheasy.github.repository.model.GithubRepositoryMetadata
+import com.ozdece.gheasy.github.repository.logic.RepositoryServiceImpl
+import com.ozdece.gheasy.github.repository.model.RepositoryMetadata
 import com.ozdece.gheasy.github.repository.model.PrimaryLanguage
+import com.ozdece.gheasy.github.repository.model.Repository
 import com.ozdece.gheasy.github.repository.model.RepositoryOwner
 import com.ozdece.gheasy.github.repository.model.RepositoryVisibility
 import com.ozdece.gheasy.mocks.InMemoryProcessService
@@ -15,12 +15,12 @@ import spock.lang.Specification
 
 import java.time.ZonedDateTime
 
-class GithubRepositoryServiceSpec extends Specification {
+class RepositoryServiceSpec extends Specification {
 
     static String TEST_FILES_DIR = System.getProperty("java.io.tmpdir") + "/gheasy"
 
     final ProcessService processService = new InMemoryProcessService()
-    final GithubRepositoryService githubRepositoryService = new GithubRepositoryServiceImpl(processService, TEST_FILES_DIR)
+    final RepositoryService githubRepositoryService = new RepositoryServiceImpl(processService, TEST_FILES_DIR)
 
     static String VALID_GITHUB_REPO_PATH = "${TEST_FILES_DIR}/valid_repo"
     static String INVALID_GIT_REPO_PATH = "${TEST_FILES_DIR}/invalid_git_repo"
@@ -47,11 +47,11 @@ class GithubRepositoryServiceSpec extends Specification {
     }
 
     def "should add a new bookmark if it doesn't exist"() {
-        given: 'A new GithubRepository'
-        final GithubRepository githubRepository = newGithubRepository("new-id")
+        given: 'A new Repository'
+        final Repository githubRepository = newGithubRepository("new-id")
 
         when: 'A new github repository is being bookmarked'
-        Mono<GithubRepository> result = githubRepositoryService.upsertBookmark(githubRepository)
+        Mono<Repository> result = githubRepositoryService.upsertBookmark(githubRepository)
 
         then: 'A new bookmark is added'
         StepVerifier.create(result)
@@ -68,7 +68,7 @@ class GithubRepositoryServiceSpec extends Specification {
 
     def "should update a bookmark if it already exist"() {
         given: 'A new github repository'
-        final GithubRepository githubRepository = newGithubRepository("new-id")
+        final Repository githubRepository = newGithubRepository("new-id")
 
         and: 'A new github repository is being bookmarked'
         StepVerifier.create(githubRepositoryService.upsertBookmark(githubRepository))
@@ -76,8 +76,8 @@ class GithubRepositoryServiceSpec extends Specification {
                 .verifyComplete()
 
         when: 'An existing bookmark is being updated'
-        final GithubRepository updated = githubRepository.withDirectoryPath("directory_path")
-        Mono<GithubRepository> result = githubRepositoryService.upsertBookmark(updated)
+        final Repository updated = githubRepository.withDirectoryPath("directory_path")
+        Mono<Repository> result = githubRepositoryService.upsertBookmark(updated)
 
         then: 'The bookmark is updated successfully'
         StepVerifier.create(result)
@@ -96,11 +96,11 @@ class GithubRepositoryServiceSpec extends Specification {
     }
 
     def "should remove a bookmark if it exists"() {
-        given: 'A new GithubRepository'
-        final GithubRepository githubRepository = newGithubRepository("new-id")
+        given: 'A new Repository'
+        final Repository githubRepository = newGithubRepository("new-id")
 
         and: 'A new github repository is being bookmarked'
-        Mono<GithubRepository> upsertResult = githubRepositoryService.upsertBookmark(githubRepository)
+        Mono<Repository> upsertResult = githubRepositoryService.upsertBookmark(githubRepository)
         StepVerifier.create(upsertResult)
                 .assertNext {gr -> assert gr.id() == "new-id"}
                 .verifyComplete()
@@ -113,7 +113,7 @@ class GithubRepositoryServiceSpec extends Specification {
                 .verifyComplete()
 
         when: 'An existing bookmark is trying to be removed'
-        Mono<ImmutableSet<GithubRepository>> removeResult = githubRepositoryService.removeBookmark(githubRepository)
+        Mono<ImmutableSet<Repository>> removeResult = githubRepositoryService.removeBookmark(githubRepository)
 
         then: 'The existing bookmark is removed'
         StepVerifier.create(removeResult)
@@ -122,11 +122,11 @@ class GithubRepositoryServiceSpec extends Specification {
     }
 
     def "should do nothing and complete successfully if parameter github repository is not found in bookmarks"() {
-        given: 'A new GithubRepository'
-        final GithubRepository githubRepository = newGithubRepository("new-id")
+        given: 'A new Repository'
+        final Repository githubRepository = newGithubRepository("new-id")
 
         when: 'trying to remove a bookmark that does not exist'
-        Mono<ImmutableSet<GithubRepository>> result = githubRepositoryService.removeBookmark(githubRepository)
+        Mono<ImmutableSet<Repository>> result = githubRepositoryService.removeBookmark(githubRepository)
 
         then: 'ImmutableSet should remain as-is with successful complete'
         StepVerifier.create(result)
@@ -136,7 +136,7 @@ class GithubRepositoryServiceSpec extends Specification {
 
     def "should retrieve the repository metadata successfully"() {
         when: 'trying to fetch the Github repository metadata'
-        Mono<GithubRepositoryMetadata> metadataRepository = githubRepositoryService.getRepositoryMetadata(new File(VALID_GITHUB_REPO_PATH));
+        Mono<RepositoryMetadata> metadataRepository = githubRepositoryService.getRepositoryMetadata(new File(VALID_GITHUB_REPO_PATH));
 
         then: 'Metadata should be retrieved successfully'
         StepVerifier.create(metadataRepository)
@@ -147,8 +147,8 @@ class GithubRepositoryServiceSpec extends Specification {
         .verifyComplete()
     }
 
-    private static GithubRepository newGithubRepository(String id) {
-        return new GithubRepository(
+    private static Repository newGithubRepository(String id) {
+        return new Repository(
                 id,
                 "gheasy",
                 "ozdece/gheasy",

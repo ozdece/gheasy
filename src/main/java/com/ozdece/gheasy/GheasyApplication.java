@@ -7,8 +7,8 @@ import com.ozdece.gheasy.github.auth.GhAuthService;
 import com.ozdece.gheasy.github.auth.logic.GhAuthServiceImpl;
 import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.pullrequest.logic.PullRequestServiceImpl;
-import com.ozdece.gheasy.github.repository.GithubRepositoryService;
-import com.ozdece.gheasy.github.repository.logic.GithubRepositoryServiceImpl;
+import com.ozdece.gheasy.github.repository.RepositoryService;
+import com.ozdece.gheasy.github.repository.logic.RepositoryServiceImpl;
 import com.ozdece.gheasy.image.ImageService;
 import com.ozdece.gheasy.image.logic.ImageServiceImpl;
 import com.ozdece.gheasy.process.ProcessService;
@@ -38,7 +38,7 @@ public class GheasyApplication {
     private static final ProcessService processService = new ProcessServiceImpl();
     private static final GhAuthService ghAuthService = new GhAuthServiceImpl(processService);
     private static final ImageService imageService = new ImageServiceImpl(processService, appConfig);
-    private static final GithubRepositoryService githubRepositoryService = new GithubRepositoryServiceImpl(processService, GheasyApplication.CONFIG_FOLDER_PATH);
+    private static final RepositoryService REPOSITORY_SERVICE = new RepositoryServiceImpl(processService, GheasyApplication.CONFIG_FOLDER_PATH);
     private static final PullRequestService pullRequestService = new PullRequestServiceImpl(processService);
 
     private static final ImmutableSet<String> MANDATORY_APPS_TO_BE_PRESENT = ImmutableSet.of("git", "gh");
@@ -85,7 +85,7 @@ public class GheasyApplication {
                     System.exit(1);
                 })
                 .subscribe(githubUser -> {
-                    final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, githubRepositoryService, pullRequestService, imageService);
+                    final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, REPOSITORY_SERVICE, pullRequestService, imageService);
                     frmMainDashboard.setVisible(true);
                 });
 

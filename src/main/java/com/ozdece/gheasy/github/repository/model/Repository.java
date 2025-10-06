@@ -3,7 +3,7 @@ package com.ozdece.gheasy.github.repository.model;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 
-public record GithubRepository(
+public record Repository(
         String id,
         String name,
         String nameWithOwner,
@@ -16,8 +16,8 @@ public record GithubRepository(
         RepositoryVisibility visibility,
         boolean isArchived
 ) {
-    public GithubRepository withDirectoryPath(String directoryPath) {
-        return new GithubRepository(
+    public Repository withDirectoryPath(String directoryPath) {
+        return new Repository(
                 id,
                 name,
                 nameWithOwner,

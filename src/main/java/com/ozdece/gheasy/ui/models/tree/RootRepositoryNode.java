@@ -2,7 +2,7 @@ package com.ozdece.gheasy.ui.models.tree;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.ozdece.gheasy.github.repository.model.GithubRepository;
+import com.ozdece.gheasy.github.repository.model.Repository;
 import com.ozdece.gheasy.github.repository.model.RepositoryOwner;
 
 import java.util.Map;
@@ -12,7 +12,7 @@ public final class RootRepositoryNode implements GithubRepositoryTreeNode {
 
     private final ImmutableList<OwnerTreeNode> owners;
 
-    public RootRepositoryNode(Map<RepositoryOwner, ImmutableSet<GithubRepository>> repositoryMap) {
+    public RootRepositoryNode(Map<RepositoryOwner, ImmutableSet<Repository>> repositoryMap) {
        owners = repositoryMap.entrySet().stream()
                .map(entry -> this.buildOwnerTreeNode(this, entry))
                .collect(ImmutableList.toImmutableList());
@@ -32,7 +32,7 @@ public final class RootRepositoryNode implements GithubRepositoryTreeNode {
         return owners;
     }
 
-    private OwnerTreeNode buildOwnerTreeNode(RootRepositoryNode rootNode, Map.Entry<RepositoryOwner, ImmutableSet<GithubRepository>> entry) {
+    private OwnerTreeNode buildOwnerTreeNode(RootRepositoryNode rootNode, Map.Entry<RepositoryOwner, ImmutableSet<Repository>> entry) {
         final OwnerTreeNode ownerTreeNode = new OwnerTreeNode(rootNode, entry.getKey(), entry.getValue());
         return ownerTreeNode;
     }

@@ -4,11 +4,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.ozdece.gheasy.github.repository.model.GithubRepository;
-import com.ozdece.gheasy.github.repository.GithubRepositoryService;
-import com.ozdece.gheasy.github.repository.model.GithubRepositoryMetadata;
-import com.ozdece.gheasy.github.repository.model.response.GhRepositoryMetadataResponse;
-import com.ozdece.gheasy.github.repository.model.response.LicenseInfo;
+import com.ozdece.gheasy.github.repository.model.Repository;
+import com.ozdece.gheasy.github.repository.RepositoryService;
+import com.ozdece.gheasy.github.repository.model.RepositoryMetadata;
+import com.ozdece.gheasy.github.repository.model.response.RepositoryMetadataResponse;
+import com.ozdece.gheasy.github.repository.model.response.LicenseInfoResponse;
 import com.ozdece.gheasy.json.GheasyObjectMapper;
 import com.ozdece.gheasy.process.ProcessService;
 import reactor.core.publisher.Mono;
@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono;
 import java.io.File;
 import java.nio.file.Files;
 
-public class GithubRepositoryServiceImpl implements GithubRepositoryService {
+public class RepositoryServiceImpl implements RepositoryService {
 
     private final ProcessService processService;
 
@@ -24,23 +24,23 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
 
     private static final JsonMapper jsonMapper = GheasyObjectMapper.getDefaultJsonMapper();
 
-    public GithubRepositoryServiceImpl(ProcessService processService, String configFolderPath) {
+    public RepositoryServiceImpl(ProcessService processService, String configFolderPath) {
         this.processService = processService;
         bookmarkFilePath = configFolderPath + "/bookmarks.json";
     }
 
     @Override
-    public Mono<GithubRepository> upsertBookmark(GithubRepository githubRepository) {
+    public Mono<Repository> upsertBookmark(Repository repository) {
         return getBookmarkedRepositories()
-                .map(repositories -> updateBookmarks(repositories, githubRepository))
+                .map(repositories -> updateBookmarks(repositories, repository))
                 .flatMap(this::saveBookmarkChanges)
-                .thenReturn(githubRepository);
+                .thenReturn(repository);
     }
 
     @Override
-    public Mono<ImmutableSet<GithubRepository>> removeBookmark(GithubRepository githubRepository) {
+    public Mono<ImmutableSet<Repository>> removeBookmark(Repository repository) {
         return getBookmarkedRepositories()
-                .map(repos -> removeBookmark(repos, githubRepository))
+                .map(repos -> removeBookmark(repos, repository))
                 .flatMap(updatedBookmarks ->
                         saveBookmarkChanges(updatedBookmarks)
                                 .thenReturn(updatedBookmarks)
@@ -48,7 +48,7 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
     }
 
     @Override
-    public Mono<ImmutableSet<GithubRepository>> getBookmarkedRepositories() {
+    public Mono<ImmutableSet<Repository>> getBookmarkedRepositories() {
         return Mono.fromCallable(() -> {
             final File bookmarkFile = new File(bookmarkFilePath);
 
@@ -64,7 +64,7 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
                 return ImmutableSet.of();
             } else {
                 final byte[] bookmarkFileBytes = Files.readAllBytes(bookmarkFile.toPath());
-                final ImmutableSet<GithubRepository> repositories = jsonMapper.readValue(bookmarkFileBytes, new TypeReference<>() {});
+                final ImmutableSet<Repository> repositories = jsonMapper.readValue(bookmarkFileBytes, new TypeReference<>() {});
 
                 return repositories;
             }
@@ -72,28 +72,28 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
     }
 
     @Override
-    public Mono<GithubRepositoryMetadata> getRepositoryMetadata(String repository) {
+    public Mono<RepositoryMetadata> getRepositoryMetadata(String repository) {
         return getRepositoryMetadataResponse(repository)
-                .map(response -> new GithubRepositoryMetadata(
+                .map(response -> new RepositoryMetadata(
                         response.latestRelease(),
                         response.stargazerCount(),
-                        response.licenseInfo().map(LicenseInfo::name))
+                        response.licenseInfo().map(LicenseInfoResponse::name))
                 );
     }
 
-    private Mono<GhRepositoryMetadataResponse> getRepositoryMetadataResponse(String repository) {
+    private Mono<RepositoryMetadataResponse> getRepositoryMetadataResponse(String repository) {
        final ProcessBuilder processBuilder = new ProcessBuilder(getGhGetRepoMetadataCommand(repository));
 
-       return Mono.fromCallable(() -> processService.getThenParseProcessOutput(processBuilder, GhRepositoryMetadataResponse.class));
+       return Mono.fromCallable(() -> processService.getThenParseProcessOutput(processBuilder, RepositoryMetadataResponse.class));
     }
 
-    private ImmutableSet<GithubRepository> removeBookmark(ImmutableSet<GithubRepository> githubRepositories, GithubRepository githubRepository) {
+    private ImmutableSet<Repository> removeBookmark(ImmutableSet<Repository> githubRepositories, Repository repository) {
         return githubRepositories.stream()
-                .filter(repo -> !repo.id().equals(githubRepository.id()))
+                .filter(repo -> !repo.id().equals(repository.id()))
                 .collect(ImmutableSet.toImmutableSet());
     }
 
-    private Mono<Void> saveBookmarkChanges(ImmutableSet<GithubRepository> githubRepositories) {
+    private Mono<Void> saveBookmarkChanges(ImmutableSet<Repository> githubRepositories) {
         return Mono.fromCallable(() -> {
                     final byte[] jsonBytes = jsonMapper.writeValueAsBytes(githubRepositories);
                     final File bookmarkFile = new File(bookmarkFilePath);
@@ -103,18 +103,18 @@ public class GithubRepositoryServiceImpl implements GithubRepositoryService {
                 .then();
     }
 
-    private ImmutableSet<GithubRepository> updateBookmarks(ImmutableSet<GithubRepository> githubRepositories, GithubRepository githubRepository) {
+    private ImmutableSet<Repository> updateBookmarks(ImmutableSet<Repository> githubRepositories, Repository repository) {
         final boolean repoExist = githubRepositories.stream()
-                .anyMatch(repo -> repo.id().equals(githubRepository.id()));
+                .anyMatch(repo -> repo.id().equals(repository.id()));
 
         if (repoExist) {
             return githubRepositories.stream()
-                    .map(repo -> repo.id().equals(githubRepository.id()) ? githubRepository : repo)
+                    .map(repo -> repo.id().equals(repository.id()) ? repository : repo)
                     .collect(ImmutableSet.toImmutableSet());
         } else {
-            return ImmutableSet.<GithubRepository>builder()
+            return ImmutableSet.<Repository>builder()
                     .addAll(githubRepositories)
-                    .add(githubRepository)
+                    .add(repository)
                     .build();
         }
     }

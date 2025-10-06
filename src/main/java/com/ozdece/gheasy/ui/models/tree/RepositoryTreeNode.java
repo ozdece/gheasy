@@ -1,22 +1,24 @@
 package com.ozdece.gheasy.ui.models.tree;
 
 import com.google.common.collect.ImmutableList;
-import com.ozdece.gheasy.github.repository.model.GithubRepository;
+import com.ozdece.gheasy.github.repository.model.Repository;
+import com.ozdece.gheasy.github.repository.model.RepositoryStats;
 
 import java.util.Optional;
 
 public final class RepositoryTreeNode implements GithubRepositoryTreeNode {
 
-    private final GithubRepository githubRepository;
+    private final Repository repository;
     private final OwnerTreeNode parent;
+    private RepositoryStats repositoryStats = new RepositoryStats(0, 0);
 
     private final ImmutableList<RepositoryTreeNodeLeaf> leafs = ImmutableList.of(
             new RepositoryTreeNodeLeaf(this, RepositoryTreeNodeType.PULL_REQUEST),
             new RepositoryTreeNodeLeaf(this, RepositoryTreeNodeType.ISSUE)
     );
 
-    public RepositoryTreeNode(OwnerTreeNode owner, GithubRepository githubRepository) {
-        this.githubRepository = githubRepository;
+    public RepositoryTreeNode(OwnerTreeNode owner, Repository repository) {
+        this.repository = repository;
         this.parent = owner;
     }
 
@@ -38,8 +40,15 @@ public final class RepositoryTreeNode implements GithubRepositoryTreeNode {
         return leafs.size();
     }
 
-    public GithubRepository getGithubRepository() {
-        return githubRepository;
+    public Repository getGithubRepository() {
+        return repository;
     }
 
+    public RepositoryStats getRepositoryStats() {
+        return repositoryStats;
+    }
+
+    public void setRepositoryStats(RepositoryStats repositoryStats) {
+        this.repositoryStats = repositoryStats;
+    }
 }

@@ -2,7 +2,7 @@ package com.ozdece.gheasy.ui.models.tree;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.ozdece.gheasy.github.repository.model.GithubRepository;
+import com.ozdece.gheasy.github.repository.model.Repository;
 import com.ozdece.gheasy.github.repository.model.RepositoryOwner;
 
 import java.util.Optional;
@@ -16,7 +16,7 @@ public final class OwnerTreeNode implements GithubRepositoryTreeNode {
     public OwnerTreeNode(
             RootRepositoryNode rootNode,
             RepositoryOwner repositoryOwner,
-            ImmutableSet<GithubRepository> repositories) {
+            ImmutableSet<Repository> repositories) {
        this.rootNode = rootNode;
        this.owner = repositoryOwner;
        this.repositoryTreeNodes = repositories.stream()

@@ -1,0 +1,13 @@
+package com.ozdece.gheasy.github.repository;
+
+import com.google.common.collect.ImmutableSet;
+import com.ozdece.gheasy.github.repository.model.Repository;
+import com.ozdece.gheasy.github.repository.model.RepositoryMetadata;
+import reactor.core.publisher.Mono;
+
+public interface RepositoryService {
+    Mono<Repository> upsertBookmark(Repository repository);
+    Mono<ImmutableSet<Repository>> removeBookmark(Repository repository);
+    Mono<ImmutableSet<Repository>> getBookmarkedRepositories();
+    Mono<RepositoryMetadata> getRepositoryMetadata(String repository);
+}
