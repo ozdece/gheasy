@@ -1,10 +1,18 @@
 package com.ozdece.gheasy.mocks
 
 import com.fasterxml.jackson.core.type.TypeReference
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
 import com.ozdece.gheasy.github.auth.model.GithubUser
 import com.ozdece.gheasy.github.auth.model.UserType
+import com.ozdece.gheasy.github.organization.model.Organization
+import com.ozdece.gheasy.github.pullrequest.model.MergeStateStatus
+import com.ozdece.gheasy.github.pullrequest.model.MergeableState
+import com.ozdece.gheasy.github.pullrequest.model.PullRequest
+import com.ozdece.gheasy.github.pullrequest.model.PullRequestAuthor
+import com.ozdece.gheasy.github.pullrequest.model.PullRequestStatus
 import com.ozdece.gheasy.github.repository.RepositoryServiceSpec
-import com.ozdece.gheasy.github.repository.model.PrimaryLanguage
+
 import com.ozdece.gheasy.github.repository.model.Repository
 import com.ozdece.gheasy.github.repository.model.RepositoryOwner
 import com.ozdece.gheasy.github.repository.model.RepositoryVisibility
@@ -25,6 +33,11 @@ class InMemoryProcessService implements ProcessService {
     @Override
     <T> T getThenParseProcessOutput(ProcessBuilder processBuilder, TypeReference<T> typeReference) throws IOException, InterruptedException {
         return mockParseResult(processBuilder, typeReference.getClass(), ProcessResponse.CLI)
+    }
+
+    @Override
+    <T> T getThenParseProcessOutput(ProcessBuilder processBuilder, TypeReference<T> typeReference, ProcessResponse processResponse) throws IOException, InterruptedException {
+        return mockParseResult(processBuilder, typeReference.getClass(), processResponse)
     }
 
     @Override
@@ -75,26 +88,62 @@ class InMemoryProcessService implements ProcessService {
                     "licenseInfo,name,nameWithOwner,owner,primaryLanguage,url,visibility" -> {
                 (T) newGithubRepository("id")
             }
-            case "gh repo view --json latestRelease,licenseInfo,stargazerCount" -> {
+            case "gh repo view repo --json latestRelease,licenseInfo,stargazerCount" -> {
                 (T) new RepositoryMetadataResponse(Optional.empty(), Optional.empty(), 1)
             }
+            case "gh pr list --repo repo --search \"assignee:@me OR review-requested:@me\" " +
+                    "--limit 1000 " +
+                    "--json id,assignees,additions,author,changedFiles,closed,createdAt,deletions,isDraft,labels,mergeStateStatus,mergeable,number,state,statusCheckRollup,title,updatedAt,url" ->
+                (T) ImmutableList.of(newPullRequest("id-1"), newPullRequest("id-2"))
+            case "gh pr list --repo repo --search \"assignee:@me OR review-requested:@me\" --limit 1000 | wc -l"->
+                (T) 1
+            case "gh api /user/orgs --paginate" ->
+                (T) ImmutableList.of(newGithubOrganization("id-1"), newGithubOrganization("id-2"))
             default -> null
         }
+    }
+
+    private Organization newGithubOrganization(String id) {
+        return new Organization(
+                id,
+                "org",
+                "url",
+                "url"
+        )
+    }
+
+    private PullRequest newPullRequest(String id) {
+       return new PullRequest(
+               id,
+               new PullRequestAuthor("id", "test", Optional.empty()),
+               "Title",
+               false,
+               false,
+               "url",
+               0,
+               0,
+               0,
+               0,
+               ZonedDateTime.now(),
+               Optional.empty(),
+               PullRequestStatus.OPEN,
+               ImmutableSet.of(),
+               ImmutableList.of(),
+               MergeStateStatus.CLEAN,
+               MergeableState.MERGEABLE
+       )
     }
 
     private static Repository newGithubRepository(String id) {
         return new Repository(
                 id,
                 "gheasy",
-                "ozdece/gheasy",
-                "/tmp",
                 Optional.empty(),
                 "https://example.com",
                 new RepositoryOwner("id", "ozdece"),
                 ZonedDateTime.now(),
-                new PrimaryLanguage("Java"),
+                "Java",
                 RepositoryVisibility.PUBLIC,
-                false
         )
     }
 }

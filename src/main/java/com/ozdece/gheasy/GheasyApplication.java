@@ -3,8 +3,10 @@ package com.ozdece.gheasy;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.ozdece.gheasy.github.auth.GhAuthService;
-import com.ozdece.gheasy.github.auth.logic.GhAuthServiceImpl;
+import com.ozdece.gheasy.github.auth.AuthService;
+import com.ozdece.gheasy.github.auth.logic.AuthServiceImpl;
+import com.ozdece.gheasy.github.organization.OrganizationService;
+import com.ozdece.gheasy.github.organization.logic.OrganizationServiceImpl;
 import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.pullrequest.logic.PullRequestServiceImpl;
 import com.ozdece.gheasy.github.repository.RepositoryService;
@@ -36,9 +38,10 @@ public class GheasyApplication {
     private static final Config appConfig = ConfigFactory.load();
 
     private static final ProcessService processService = new ProcessServiceImpl();
-    private static final GhAuthService ghAuthService = new GhAuthServiceImpl(processService);
+    private static final OrganizationService organizationService = new OrganizationServiceImpl(processService);
+    private static final AuthService authService = new AuthServiceImpl(processService, organizationService);
     private static final ImageService imageService = new ImageServiceImpl(processService, appConfig);
-    private static final RepositoryService REPOSITORY_SERVICE = new RepositoryServiceImpl(processService, GheasyApplication.CONFIG_FOLDER_PATH);
+    private static final RepositoryService repositoryService = new RepositoryServiceImpl(processService, GheasyApplication.CONFIG_FOLDER_PATH);
     private static final PullRequestService pullRequestService = new PullRequestServiceImpl(processService);
 
     private static final ImmutableSet<String> MANDATORY_APPS_TO_BE_PRESENT = ImmutableSet.of("git", "gh");
@@ -75,7 +78,7 @@ public class GheasyApplication {
                         System.exit(-1);
                 }});
 
-        ghAuthService.getLoggedInUser()
+        authService.getLoggedInUser()
                 .doOnError(err -> {
                     JOptionPane.showMessageDialog(null,
                             "Gheasy cannot be used without gh being authorized.\n\nTo be able to use the app, please login your account using \"gh auth login\" in a shell.",
@@ -85,7 +88,7 @@ public class GheasyApplication {
                     System.exit(1);
                 })
                 .subscribe(githubUser -> {
-                    final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, REPOSITORY_SERVICE, pullRequestService, imageService);
+                    final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, repositoryService, pullRequestService, imageService);
                     frmMainDashboard.setVisible(true);
                 });
 

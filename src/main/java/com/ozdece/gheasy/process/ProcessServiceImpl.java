@@ -28,6 +28,16 @@ public class ProcessServiceImpl implements ProcessService {
     }
 
     @Override
+    public <T> T getThenParseProcessOutput(ProcessBuilder processBuilder, TypeReference<T> typeReference, ProcessResponse processResponse) throws IOException, InterruptedException {
+        final JsonMapper mapper = switch (processResponse) {
+            case API -> snakeCaseJsonMapper;
+            case CLI -> defaultJsonMapper;
+        };
+
+        return mapper.readValue(getProcessOutputBytes(processBuilder), typeReference);
+    }
+
+    @Override
     public <T> T getThenParseProcessOutput(ProcessBuilder processBuilder, Class<T> resultObjectClass, ProcessResponse processResponse) throws IOException, InterruptedException {
         final JsonMapper mapper = switch (processResponse) {
             case API -> snakeCaseJsonMapper;

@@ -7,8 +7,6 @@ import com.ozdece.gheasy.github.pullrequest.model.PullRequest;
 import com.ozdece.gheasy.process.ProcessService;
 import reactor.core.publisher.Mono;
 
-import java.io.File;
-
 public class PullRequestServiceImpl implements PullRequestService {
 
     private final ProcessService processService;
@@ -28,7 +26,7 @@ public class PullRequestServiceImpl implements PullRequestService {
 
     @Override
     public Mono<Integer> getAssignedPullRequestCount(String repository) {
-        final ProcessBuilder processBuilder = new ProcessBuilder(getAssignedPullRequestCommand(repository));
+        final ProcessBuilder processBuilder = new ProcessBuilder(getAssignedPullRequestCountCommand(repository));
 
         return Mono.fromCallable(() -> processService.getThenParseProcessOutput(processBuilder, new TypeReference<>() {}));
     }
@@ -48,7 +46,7 @@ public class PullRequestServiceImpl implements PullRequestService {
                "id,assignees,additions,author,changedFiles,closed,createdAt,deletions,isDraft,labels,mergeStateStatus,mergeable,number,state,statusCheckRollup,title,updatedAt,url");
     }
 
-    private ImmutableList<String> getAssignedPullRequestCommand(String repository) {
+    private ImmutableList<String> getAssignedPullRequestCountCommand(String repository) {
         return ImmutableList.of("gh", "pr", "list", "--repo", repository, "--search", ASSIGNED_PRS_SEARCH_QUERY, "--limit", String.valueOf(PR_LIMIT), "|", "wc", "-l");
     }
 }

@@ -5,7 +5,6 @@ import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequestStatus;
 import com.ozdece.gheasy.github.repository.RepositoryService;
 import com.ozdece.gheasy.github.repository.model.Repository;
-import com.ozdece.gheasy.github.repository.model.RepositoryStats;
 import com.ozdece.gheasy.image.ImageService;
 import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.ResourceLoader;
@@ -69,7 +68,8 @@ public class FrmMainDashboard extends JFrame {
         add(buildLeftPanel(), BorderLayout.WEST);
         add(buildCentralPanel(), BorderLayout.CENTER);
 
-        loadDashboardData();
+        setJMenuBar(buildMenuBar());
+
         updateGithubAvatar();
         loadNavigatorTreeModel();
     }
@@ -100,8 +100,6 @@ public class FrmMainDashboard extends JFrame {
         lblLastRelease.setFont(Fonts.withSize(14));
         lblLicense.setFont(Fonts.withSize(14));
         lblRepoStars.setFont(Fonts.withSize(14));
-
-        final JComponent pullRequestPanel = buildPullRequestPanel();
 
         final JToolBar tbBottomBar = new JToolBar();
         tbBottomBar.setLayout(new FlowLayout(FlowLayout.LEADING));
@@ -145,12 +143,6 @@ public class FrmMainDashboard extends JFrame {
                                         .addComponent(tabbedPane)
                                         .addGap(10)
                         )
-                        //.addGroup(
-                        //        groupLayout.createSequentialGroup()
-                        //                .addGap(10)
-                        //                .addComponent(pullRequestPanel)
-                        //                .addGap(10)
-                        //)
                         .addComponent(tbBottomBar)
         );
 
@@ -183,9 +175,6 @@ public class FrmMainDashboard extends JFrame {
                                         .addComponent(tabbedPane, 500, 500, Integer.MAX_VALUE)
                                         .addGap(10)
                         )
-                        //.addGap(5)
-                        //.addComponent(pullRequestPanel)
-                        //.addGap(5)
                         .addComponent(tbBottomBar)
         );
 
@@ -294,6 +283,31 @@ public class FrmMainDashboard extends JFrame {
         return leftPanel;
     }
 
+    private JMenuBar buildMenuBar() {
+        final JMenuBar menuBar = new JMenuBar();
+
+        final JMenu repositoryMenu = new JMenu("Repository");
+        final JMenuItem addRepositoryMenuItem = new JMenuItem("Add");
+
+        final JMenu pullRequestsMenu = new JMenu("Pull Requests");
+        final JMenu issuesMenu = new JMenu("Issues");
+        final JMenu helpMenu = new JMenu("Help");
+
+        addRepositoryMenuItem.addActionListener(e -> {
+            DlgAddRepository dlgAddRepository = new DlgAddRepository(this, repositoryService);
+            dlgAddRepository.setVisible(true);
+        });
+
+        repositoryMenu.add(addRepositoryMenuItem);
+
+        menuBar.add(repositoryMenu);
+        menuBar.add(pullRequestsMenu);
+        menuBar.add(issuesMenu);
+        menuBar.add(helpMenu);
+
+        return menuBar;
+    }
+
     private void updateGithubAvatar() {
         imageService.saveGitHubAvatar(githubUser.avatarUrl())
                 .doOnError(err -> logger.error("An error occurred while saving Github avatar!", err))
@@ -310,46 +324,6 @@ public class FrmMainDashboard extends JFrame {
                     final GithubRepositoryTreeModel model = new GithubRepositoryTreeModel(githubRepositories);
                     trRepoNavigator.setModel(model);
                     trRepoNavigator.setCellRenderer(new GithubRepositoryTreeRenderer());
-
-                    final Repository repository = githubRepositories.stream().findAny().get();
-
-                    model.updateRepositoryStats(trRepoNavigator, repository, new RepositoryStats(1, 5));
                 });
     }
-
-    private void loadDashboardData() {
-    //    final File repoDirectory = new File(githubRepository.directoryPath());
-    //    repositoryService
-    //            .getRepositoryMetadata(repoDirectory)
-    //            .publishOn(SwingScheduler.edt())
-    //            .subscribeOn(Schedulers.boundedElastic())
-    //            .subscribe(metadata -> {
-    //                lblBranch.setText(String.format("Active Branch: %s", metadata.currentBranch()));
-    //                //TODO: Make last release label a HyperLink component
-
-    //                metadata.latestRelease().ifPresent(latestRelease -> {
-    //                    lblLastRelease.setText(String.format("Last Release: %s on %s",
-    //                            latestRelease.name(),
-    //                            ZoneBasedDateTimeFormatter.toFormattedString(latestRelease.publishedAt())));
-
-    //                    ResourceLoader.loadImage("images/release-icon.png")
-    //                            .map(ImageIcon::new)
-    //                            .ifPresent(lblLastRelease::setIcon);
-    //                });
-
-    //                metadata.license().ifPresent(license -> {
-    //                    lblLicense.setText(String.format("License: %s", license));
-    //                });
-
-    //                lblRepoStars.setText(String.format("%d stars", metadata.starCount()));
-    //            });
-
-    //    pullRequestService.getPullRequests(repoDirectory)
-    //            .subscribeOn(Schedulers.boundedElastic())
-    //            .publishOn(SwingScheduler.edt())
-    //            .subscribe(pullRequests -> {
-    //                tblPullRequests.setModel(new PullRequestsTableModel(pullRequests));
-    //            });
-    }
-
 }

@@ -9,5 +9,4 @@ import java.io.File;
 public interface PullRequestService {
     Mono<ImmutableList<PullRequest>> getPullRequests(String repository);
     Mono<Integer> getAssignedPullRequestCount(String repository);
-
 }

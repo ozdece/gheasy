@@ -30,9 +30,11 @@ public class RepositoryServiceImpl implements RepositoryService {
     }
 
     @Override
-    public Mono<Repository> upsertBookmark(Repository repository) {
+    public Mono<Repository> insertBookmark(Repository repository) {
         return getBookmarkedRepositories()
-                .map(repositories -> updateBookmarks(repositories, repository))
+                .filter(repositories -> !this.isBookmarkExist(repositories, repository))
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("Repository %s already bookmarked in Gheasy".formatted(repository.name()))))
+                .map(repositories -> updateBookmarkList(repositories, repository))
                 .flatMap(this::saveBookmarkChanges)
                 .thenReturn(repository);
     }
@@ -40,6 +42,8 @@ public class RepositoryServiceImpl implements RepositoryService {
     @Override
     public Mono<ImmutableSet<Repository>> removeBookmark(Repository repository) {
         return getBookmarkedRepositories()
+                .filter(repositories -> this.isBookmarkExist(repositories, repository))
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("Repository %s does not exist in bookmarks".formatted(repository.name()))))
                 .map(repos -> removeBookmark(repos, repository))
                 .flatMap(updatedBookmarks ->
                         saveBookmarkChanges(updatedBookmarks)
@@ -103,20 +107,16 @@ public class RepositoryServiceImpl implements RepositoryService {
                 .then();
     }
 
-    private ImmutableSet<Repository> updateBookmarks(ImmutableSet<Repository> githubRepositories, Repository repository) {
-        final boolean repoExist = githubRepositories.stream()
-                .anyMatch(repo -> repo.id().equals(repository.id()));
+    private boolean isBookmarkExist(ImmutableSet<Repository> repositories, Repository repository) {
+        return repositories.stream()
+                .anyMatch(r -> r.id().equals(repository.id()));
+    }
 
-        if (repoExist) {
-            return githubRepositories.stream()
-                    .map(repo -> repo.id().equals(repository.id()) ? repository : repo)
-                    .collect(ImmutableSet.toImmutableSet());
-        } else {
-            return ImmutableSet.<Repository>builder()
-                    .addAll(githubRepositories)
-                    .add(repository)
-                    .build();
-        }
+    private ImmutableSet<Repository> updateBookmarkList(ImmutableSet<Repository> githubRepositories, Repository repository) {
+        return ImmutableSet.<Repository>builder()
+                .addAll(githubRepositories)
+                .add(repository)
+                .build();
     }
 
     private ImmutableList<String> getGhGetRepoMetadataCommand(String repository) {

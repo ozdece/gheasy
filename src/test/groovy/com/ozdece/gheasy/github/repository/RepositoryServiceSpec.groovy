@@ -3,7 +3,7 @@ package com.ozdece.gheasy.github.repository
 import com.google.common.collect.ImmutableSet
 import com.ozdece.gheasy.github.repository.logic.RepositoryServiceImpl
 import com.ozdece.gheasy.github.repository.model.RepositoryMetadata
-import com.ozdece.gheasy.github.repository.model.PrimaryLanguage
+
 import com.ozdece.gheasy.github.repository.model.Repository
 import com.ozdece.gheasy.github.repository.model.RepositoryOwner
 import com.ozdece.gheasy.github.repository.model.RepositoryVisibility
@@ -21,10 +21,6 @@ class RepositoryServiceSpec extends Specification {
 
     final ProcessService processService = new InMemoryProcessService()
     final RepositoryService githubRepositoryService = new RepositoryServiceImpl(processService, TEST_FILES_DIR)
-
-    static String VALID_GITHUB_REPO_PATH = "${TEST_FILES_DIR}/valid_repo"
-    static String INVALID_GIT_REPO_PATH = "${TEST_FILES_DIR}/invalid_git_repo"
-    static String INVALID_GITHUB_REPO_PATH = "${TEST_FILES_DIR}/invalid_github_repo"
 
     def setupSpec() {
         final File tmpFile = new File(TEST_FILES_DIR)
@@ -48,68 +44,50 @@ class RepositoryServiceSpec extends Specification {
 
     def "should add a new bookmark if it doesn't exist"() {
         given: 'A new Repository'
-        final Repository githubRepository = newGithubRepository("new-id")
+        final Repository githubRepository = newGithubRepository(UUID.randomUUID().toString())
 
         when: 'A new github repository is being bookmarked'
-        Mono<Repository> result = githubRepositoryService.upsertBookmark(githubRepository)
+        Mono<Repository> result = githubRepositoryService.insertBookmark(githubRepository)
 
         then: 'A new bookmark is added'
         StepVerifier.create(result)
-                .assertNext {gr -> assert gr.id() == "new-id"}
+                .assertNext {gr -> assert gr.id() == githubRepository.id()}
                 .verifyComplete()
 
         StepVerifier.create(githubRepositoryService.getBookmarkedRepositories())
         .assertNext { bookmarks ->
             assert bookmarks.size() == 1
-            assert bookmarks.toList().get(0).id() == "new-id"
+            assert bookmarks.toList().get(0).id() == githubRepository.id()
         }
         .verifyComplete()
     }
 
-    def "should update a bookmark if it already exist"() {
+    def "should throw an error if a bookmark already exist"() {
         given: 'A new github repository'
-        final Repository githubRepository = newGithubRepository("new-id")
+        final Repository githubRepository = newGithubRepository(UUID.randomUUID().toString())
 
         and: 'A new github repository is being bookmarked'
-        StepVerifier.create(githubRepositoryService.upsertBookmark(githubRepository))
-                .assertNext {gr -> assert gr.id() == "new-id"}
+        StepVerifier.create(githubRepositoryService.insertBookmark(githubRepository))
+                .assertNext {gr -> assert gr.id() == githubRepository.id()}
                 .verifyComplete()
 
-        when: 'An existing bookmark is being updated'
-        final Repository updated = githubRepository.withDirectoryPath("directory_path")
-        Mono<Repository> result = githubRepositoryService.upsertBookmark(updated)
+        when: 'An existing bookmark is trying to be re-added'
+        Mono<Repository> result = githubRepositoryService.insertBookmark(githubRepository)
 
         then: 'The bookmark is updated successfully'
         StepVerifier.create(result)
-                .assertNext {gr ->
-                    assert gr.id() == "new-id"
-                    assert gr.directoryPath() == "directory_path"
-                }
-                .verifyComplete()
-
-        StepVerifier.create(githubRepositoryService.getBookmarkedRepositories())
-                .assertNext { bookmarks ->
-                    assert bookmarks.size() == 1
-                    assert bookmarks.toList().get(0).id() == "new-id"
-                }
-                .verifyComplete()
+                .expectError(IllegalArgumentException.class)
+                .verify()
     }
 
     def "should remove a bookmark if it exists"() {
         given: 'A new Repository'
-        final Repository githubRepository = newGithubRepository("new-id")
+        final Repository githubRepository = newGithubRepository(UUID.randomUUID().toString())
 
         and: 'A new github repository is being bookmarked'
-        Mono<Repository> upsertResult = githubRepositoryService.upsertBookmark(githubRepository)
-        StepVerifier.create(upsertResult)
-                .assertNext {gr -> assert gr.id() == "new-id"}
-                .verifyComplete()
-
-        StepVerifier.create(githubRepositoryService.getBookmarkedRepositories())
-                .assertNext { bookmarks ->
-                    assert bookmarks.size() == 1
-                    assert bookmarks.toList().get(0).id() == "new-id"
-                }
+        Mono<Repository> insertResult = githubRepositoryService.insertBookmark(githubRepository)
+        StepVerifier.create(insertResult)
+                .assertNext {gr -> assert gr.id() == githubRepository.id()}
                 .verifyComplete()
 
         when: 'An existing bookmark is trying to be removed'
@@ -117,31 +95,32 @@ class RepositoryServiceSpec extends Specification {
 
         then: 'The existing bookmark is removed'
         StepVerifier.create(removeResult)
-        .assertNext {bookmarks -> assert bookmarks.isEmpty()}
+        .assertNext {bookmarks ->
+            assert !bookmarks.stream().anyMatch {r -> r.id() == githubRepository.id() }
+        }
         .verifyComplete()
     }
 
-    def "should do nothing and complete successfully if parameter github repository is not found in bookmarks"() {
+    def "should throw an error when trying to remove a bookmark that does not exist"() {
         given: 'A new Repository'
-        final Repository githubRepository = newGithubRepository("new-id")
+        final Repository githubRepository = newGithubRepository(UUID.randomUUID().toString())
 
         when: 'trying to remove a bookmark that does not exist'
         Mono<ImmutableSet<Repository>> result = githubRepositoryService.removeBookmark(githubRepository)
 
         then: 'ImmutableSet should remain as-is with successful complete'
         StepVerifier.create(result)
-                .assertNext {bookmarks -> assert bookmarks.isEmpty()}
-                .verifyComplete()
+                .expectError(IllegalArgumentException.class)
+                .verify()
     }
 
     def "should retrieve the repository metadata successfully"() {
         when: 'trying to fetch the Github repository metadata'
-        Mono<RepositoryMetadata> metadataRepository = githubRepositoryService.getRepositoryMetadata(new File(VALID_GITHUB_REPO_PATH));
+        Mono<RepositoryMetadata> metadataRepository = githubRepositoryService.getRepositoryMetadata("repo")
 
         then: 'Metadata should be retrieved successfully'
         StepVerifier.create(metadataRepository)
         .assertNext {metadata ->
-            assert metadata.currentBranch() == "master"
             assert metadata.starCount() == 1
         }
         .verifyComplete()
@@ -151,15 +130,12 @@ class RepositoryServiceSpec extends Specification {
         return new Repository(
                 id,
                 "gheasy",
-                "ozdece/gheasy",
-                "/tmp",
                 Optional.empty(),
                 "https://example.com",
                 new RepositoryOwner("id", "ozdece"),
                 ZonedDateTime.now(),
-                new PrimaryLanguage("Java"),
-                RepositoryVisibility.PUBLIC,
-                false
+                "Java",
+                RepositoryVisibility.PUBLIC
         )
     }
 }
