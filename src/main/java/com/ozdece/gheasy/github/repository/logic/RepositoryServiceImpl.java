@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.ozdece.gheasy.github.auth.model.GithubOwner;
 import com.ozdece.gheasy.github.repository.model.Repository;
 import com.ozdece.gheasy.github.repository.RepositoryService;
 import com.ozdece.gheasy.github.repository.model.RepositoryMetadata;
@@ -23,6 +24,7 @@ public class RepositoryServiceImpl implements RepositoryService {
     private final String bookmarkFilePath;
 
     private static final JsonMapper jsonMapper = GheasyObjectMapper.getDefaultJsonMapper();
+    private static final int REPO_QUERY_LIMIT = 1000;
 
     public RepositoryServiceImpl(ProcessService processService, String configFolderPath) {
         this.processService = processService;
@@ -85,8 +87,18 @@ public class RepositoryServiceImpl implements RepositoryService {
                 );
     }
 
+    @Override
+    public Mono<ImmutableSet<Repository>> searchRepositoriesByOwner(GithubOwner githubOwner, String query) {
+        final ProcessBuilder processBuilder = new ProcessBuilder(getSearchRepoByOwnerCommand(githubOwner, query));
+        final TypeReference<ImmutableSet<Repository>> typeReference = new TypeReference<>(){};
+
+        return Mono.fromCallable(() ->
+            processService.getThenParseProcessOutput(processBuilder, typeReference)
+        );
+    }
+
     private Mono<RepositoryMetadataResponse> getRepositoryMetadataResponse(String repository) {
-       final ProcessBuilder processBuilder = new ProcessBuilder(getGhGetRepoMetadataCommand(repository));
+       final ProcessBuilder processBuilder = new ProcessBuilder(getRepoMetadataCommand(repository));
 
        return Mono.fromCallable(() -> processService.getThenParseProcessOutput(processBuilder, RepositoryMetadataResponse.class));
     }
@@ -119,8 +131,12 @@ public class RepositoryServiceImpl implements RepositoryService {
                 .build();
     }
 
-    private ImmutableList<String> getGhGetRepoMetadataCommand(String repository) {
+    private ImmutableList<String> getRepoMetadataCommand(String repository) {
         return ImmutableList.of("gh", "repo", "view", repository, "--json", "latestRelease,licenseInfo,stargazerCount");
+    }
+
+    private ImmutableList<String> getSearchRepoByOwnerCommand(GithubOwner owner, String query) {
+        return ImmutableList.of("gh", "search", "repos", "--owner=%s".formatted(owner.name()), "\"%s\"".formatted(query), "--limit", String.valueOf(REPO_QUERY_LIMIT));
     }
 
 }

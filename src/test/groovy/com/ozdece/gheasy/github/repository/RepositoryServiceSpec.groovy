@@ -1,6 +1,9 @@
 package com.ozdece.gheasy.github.repository
 
+import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSet
+import com.ozdece.gheasy.github.auth.model.GithubOwner
+import com.ozdece.gheasy.github.auth.model.UserType
 import com.ozdece.gheasy.github.repository.logic.RepositoryServiceImpl
 import com.ozdece.gheasy.github.repository.model.RepositoryMetadata
 
@@ -20,7 +23,7 @@ class RepositoryServiceSpec extends Specification {
     static String TEST_FILES_DIR = System.getProperty("java.io.tmpdir") + "/gheasy"
 
     final ProcessService processService = new InMemoryProcessService()
-    final RepositoryService githubRepositoryService = new RepositoryServiceImpl(processService, TEST_FILES_DIR)
+    final RepositoryService repositoryService = new RepositoryServiceImpl(processService, TEST_FILES_DIR)
 
     def setupSpec() {
         final File tmpFile = new File(TEST_FILES_DIR)
@@ -47,14 +50,14 @@ class RepositoryServiceSpec extends Specification {
         final Repository githubRepository = newGithubRepository(UUID.randomUUID().toString())
 
         when: 'A new github repository is being bookmarked'
-        Mono<Repository> result = githubRepositoryService.insertBookmark(githubRepository)
+        Mono<Repository> result = repositoryService.insertBookmark(githubRepository)
 
         then: 'A new bookmark is added'
         StepVerifier.create(result)
                 .assertNext {gr -> assert gr.id() == githubRepository.id()}
                 .verifyComplete()
 
-        StepVerifier.create(githubRepositoryService.getBookmarkedRepositories())
+        StepVerifier.create(repositoryService.getBookmarkedRepositories())
         .assertNext { bookmarks ->
             assert bookmarks.size() == 1
             assert bookmarks.toList().get(0).id() == githubRepository.id()
@@ -67,12 +70,12 @@ class RepositoryServiceSpec extends Specification {
         final Repository githubRepository = newGithubRepository(UUID.randomUUID().toString())
 
         and: 'A new github repository is being bookmarked'
-        StepVerifier.create(githubRepositoryService.insertBookmark(githubRepository))
+        StepVerifier.create(repositoryService.insertBookmark(githubRepository))
                 .assertNext {gr -> assert gr.id() == githubRepository.id()}
                 .verifyComplete()
 
         when: 'An existing bookmark is trying to be re-added'
-        Mono<Repository> result = githubRepositoryService.insertBookmark(githubRepository)
+        Mono<Repository> result = repositoryService.insertBookmark(githubRepository)
 
         then: 'The bookmark is updated successfully'
         StepVerifier.create(result)
@@ -85,13 +88,13 @@ class RepositoryServiceSpec extends Specification {
         final Repository githubRepository = newGithubRepository(UUID.randomUUID().toString())
 
         and: 'A new github repository is being bookmarked'
-        Mono<Repository> insertResult = githubRepositoryService.insertBookmark(githubRepository)
+        Mono<Repository> insertResult = repositoryService.insertBookmark(githubRepository)
         StepVerifier.create(insertResult)
                 .assertNext {gr -> assert gr.id() == githubRepository.id()}
                 .verifyComplete()
 
         when: 'An existing bookmark is trying to be removed'
-        Mono<ImmutableSet<Repository>> removeResult = githubRepositoryService.removeBookmark(githubRepository)
+        Mono<ImmutableSet<Repository>> removeResult = repositoryService.removeBookmark(githubRepository)
 
         then: 'The existing bookmark is removed'
         StepVerifier.create(removeResult)
@@ -106,7 +109,7 @@ class RepositoryServiceSpec extends Specification {
         final Repository githubRepository = newGithubRepository(UUID.randomUUID().toString())
 
         when: 'trying to remove a bookmark that does not exist'
-        Mono<ImmutableSet<Repository>> result = githubRepositoryService.removeBookmark(githubRepository)
+        Mono<ImmutableSet<Repository>> result = repositoryService.removeBookmark(githubRepository)
 
         then: 'ImmutableSet should remain as-is with successful complete'
         StepVerifier.create(result)
@@ -116,12 +119,30 @@ class RepositoryServiceSpec extends Specification {
 
     def "should retrieve the repository metadata successfully"() {
         when: 'trying to fetch the Github repository metadata'
-        Mono<RepositoryMetadata> metadataRepository = githubRepositoryService.getRepositoryMetadata("repo")
+        Mono<RepositoryMetadata> metadataRepository = repositoryService.getRepositoryMetadata("repo")
 
         then: 'Metadata should be retrieved successfully'
         StepVerifier.create(metadataRepository)
         .assertNext {metadata ->
             assert metadata.starCount() == 1
+        }
+        .verifyComplete()
+    }
+
+    def "should retrieve repositories for an owner by a search query"() {
+        given: 'a GithubOwner and a search query'
+        final String query = "testrepo"
+        final GithubOwner githubOwner = new GithubOwner(UserType.ORGANIZATION, "Org", "")
+
+        when: 'repositories are being retrieved'
+        final Mono<ImmutableSet<Repository>> result = repositoryService.searchRepositoriesByOwner(githubOwner, query)
+
+        then: 'Search results should be present'
+        StepVerifier.create(result)
+        .assertNext {set ->
+            final ImmutableList<Repository> list = set.stream().collect(ImmutableList.toImmutableList())
+            assert list.size() == 1
+            assert list.get(0).id() == "id-search"
         }
         .verifyComplete()
     }

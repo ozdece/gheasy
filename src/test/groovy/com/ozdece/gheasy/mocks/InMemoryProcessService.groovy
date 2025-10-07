@@ -70,20 +70,10 @@ class InMemoryProcessService implements ProcessService {
         return 0
     }
 
-    private <T> T mockParseResult(ProcessBuilder processBuilder, Class<T> resultObjectClass, ProcessResponse processResponse) throws IOException, InterruptedException {
+    private static <T> T mockParseResult(ProcessBuilder processBuilder, Class<T> resultObjectClass, ProcessResponse processResponse) throws IOException, InterruptedException {
         final String command = processBuilder.command().stream().collect(Collectors.joining(" "))
         return switch (command) {
             case "gh api user" -> (T) new GithubUser("id", "testUser", "http://example.com/", "http://example.com/avatar.png", Optional.empty(), UserType.USER)
-            case "git rev-parse --is-inside-work-tree" -> {
-                final String processDirectory = processBuilder.directory().getAbsolutePath()
-
-                if (processDirectory == RepositoryServiceSpec.VALID_GITHUB_REPO_PATH) {
-                   (T) true
-                } else if (processDirectory == RepositoryServiceSpec.INVALID_GITHUB_REPO_PATH) {
-                   (T) true
-                }
-                else null
-            }
             case "gh repo view --json id,createdAt,description,homepageUrl,isArchived,isPrivate," +
                     "licenseInfo,name,nameWithOwner,owner,primaryLanguage,url,visibility" -> {
                 (T) newGithubRepository("id")
@@ -99,11 +89,13 @@ class InMemoryProcessService implements ProcessService {
                 (T) 1
             case "gh api /user/orgs --paginate" ->
                 (T) ImmutableList.of(newGithubOrganization("id-1"), newGithubOrganization("id-2"))
+            case "gh search repos --owner=Org \"testrepo\" --limit 1000" ->
+                (T) ImmutableSet.of(newGithubRepository("id-search"))
             default -> null
         }
     }
 
-    private Organization newGithubOrganization(String id) {
+    private static Organization newGithubOrganization(String id) {
         return new Organization(
                 id,
                 "org",
@@ -112,7 +104,7 @@ class InMemoryProcessService implements ProcessService {
         )
     }
 
-    private PullRequest newPullRequest(String id) {
+    private static PullRequest newPullRequest(String id) {
        return new PullRequest(
                id,
                new PullRequestAuthor("id", "test", Optional.empty()),
