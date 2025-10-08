@@ -11,7 +11,7 @@ public class PullRequestServiceImpl implements PullRequestService {
 
     private final ProcessService processService;
 
-    private static final String ASSIGNED_PRS_SEARCH_QUERY = "\"assignee:@me OR review-requested:@me\"";
+    private static final String ASSIGNED_PRS_SEARCH_QUERY = "\"is:open AND (author:@me OR review-requested:@me)\"";
     private static final int PR_LIMIT = 1000;
 
     public PullRequestServiceImpl(ProcessService processService) {

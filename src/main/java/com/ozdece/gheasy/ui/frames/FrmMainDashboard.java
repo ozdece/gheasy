@@ -11,6 +11,7 @@ import com.ozdece.gheasy.ui.ResourceLoader;
 import com.ozdece.gheasy.ui.SwingScheduler;
 import com.ozdece.gheasy.ui.models.GithubRepositoryTreeModel;
 import com.ozdece.gheasy.ui.renderers.GithubRepositoryTreeRenderer;
+import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.scheduler.Schedulers;
@@ -25,6 +26,7 @@ public class FrmMainDashboard extends JFrame {
     private final RepositoryService repositoryService;
     private final PullRequestService pullRequestService;
     private final ImageService imageService;
+    private final Config config;
 
     private final JTree trRepoNavigator = new JTree();
 
@@ -52,7 +54,8 @@ public class FrmMainDashboard extends JFrame {
             GithubUser githubUser,
             RepositoryService repositoryService,
             PullRequestService pullRequestService,
-            ImageService imageService
+            ImageService imageService,
+            Config config
     ) {
         super(String.format("Gheasy | Dashboard, User: %s", githubUser.fullName().orElse(githubUser.username())));
 
@@ -63,6 +66,7 @@ public class FrmMainDashboard extends JFrame {
         this.repositoryService = repositoryService;
         this.pullRequestService = pullRequestService;
         this.imageService = imageService;
+        this.config = config;
 
         setLayout(new BorderLayout());
         add(buildLeftPanel(), BorderLayout.WEST);
@@ -309,11 +313,16 @@ public class FrmMainDashboard extends JFrame {
     }
 
     private void updateGithubAvatar() {
-        imageService.saveGitHubAvatar(githubUser.avatarUrl())
+        final int avatarSize = config.getInt("gheasy.images.avatar-scaled-image-size");;
+
+        imageService.saveImage(githubUser.avatarUrl(), avatarSize, avatarSize)
                 .doOnError(err -> logger.error("An error occurred while saving Github avatar!", err))
                 .publishOn(SwingScheduler.edt())
                 .subscribeOn(Schedulers.boundedElastic())
-                .subscribe(maybeImageIcon -> maybeImageIcon.ifPresent(lblGithubUser::setIcon));
+                .subscribe(maybeImageIcon ->
+                        maybeImageIcon
+                                .ifPresent(imageFile -> lblGithubUser.setIcon(new ImageIcon(imageFile.getAbsolutePath())))
+                );
     }
 
     private void loadNavigatorTreeModel() {

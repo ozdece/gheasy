@@ -33,6 +33,7 @@ public class GheasyApplication {
     private static final Logger logger = LoggerFactory.getLogger(GheasyApplication.class);
 
     public static final String CONFIG_FOLDER_PATH = System.getProperty("user.home") + "/.gheasy";
+    public static final String IMAGES_FOLDER_PATH = System.getProperty("user.home") + "/.gheasy/images";
     public static final String VERSION = Optional.ofNullable(GheasyApplication.class.getPackage().getImplementationVersion()).orElse("<unknown>");
 
     private static final Config appConfig = ConfigFactory.load();
@@ -40,7 +41,7 @@ public class GheasyApplication {
     private static final ProcessService processService = new ProcessServiceImpl();
     private static final OrganizationService organizationService = new OrganizationServiceImpl(processService);
     private static final AuthService authService = new AuthServiceImpl(processService, organizationService);
-    private static final ImageService imageService = new ImageServiceImpl(processService, appConfig);
+    private static final ImageService imageService = new ImageServiceImpl(processService);
     private static final RepositoryService repositoryService = new RepositoryServiceImpl(processService, GheasyApplication.CONFIG_FOLDER_PATH);
     private static final PullRequestService pullRequestService = new PullRequestServiceImpl(processService);
 
@@ -50,16 +51,19 @@ public class GheasyApplication {
         //Set up the theme
         FlatLightLaf.setup();
 
-        final File configFolder = new File(CONFIG_FOLDER_PATH);
+        ImmutableSet.of(CONFIG_FOLDER_PATH, IMAGES_FOLDER_PATH)
+                .forEach(path -> {
+                    final File configFolder = new File(path);
+                    if (!configFolder.exists()) {
+                        if (configFolder.mkdir()){
+                            logger.info("Gheasy config folder is created at {}", path);
+                        } else {
+                            logger.error("An error occurred while creating the config folder of Gheasy. Exiting....");
+                            System.exit(-5);
+                        }
+                    }
+                });
 
-        if (!configFolder.exists()) {
-            if (configFolder.mkdir()){
-                logger.info("Gheasy config folder is created at {}", CONFIG_FOLDER_PATH);
-            } else {
-                logger.error("An error occurred while creating the config folder of Gheasy. Exiting....");
-               System.exit(-5);
-            }
-        }
 
         MANDATORY_APPS_TO_BE_PRESENT.forEach(app -> {
                     //TODO: Check programs for each operating system
@@ -88,7 +92,7 @@ public class GheasyApplication {
                     System.exit(1);
                 })
                 .subscribe(githubUser -> {
-                    final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, repositoryService, pullRequestService, imageService);
+                    final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, repositoryService, pullRequestService, imageService, appConfig);
                     frmMainDashboard.setVisible(true);
                 });
 

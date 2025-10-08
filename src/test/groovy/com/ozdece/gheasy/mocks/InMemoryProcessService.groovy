@@ -47,22 +47,7 @@ class InMemoryProcessService implements ProcessService {
 
     @Override
     String getProcessOutput(ProcessBuilder processBuilder) throws IOException, InterruptedException {
-        final String command = processBuilder.command().stream().collect(Collectors.joining(" "))
-        final String processDirectory = processBuilder.directory().getAbsolutePath()
-
-        return switch (command) {
-            case "git remote get-url origin" -> {
-                if (processDirectory == RepositoryServiceSpec.VALID_GITHUB_REPO_PATH) {
-                    "git@github.com"
-                }
-                else null
-            }
-            case "git branch --show-current" -> {
-                if (processDirectory == RepositoryServiceSpec.VALID_GITHUB_REPO_PATH) {
-                    "master"
-                } else null
-            }
-        }
+        return null;
     }
 
     @Override
@@ -81,11 +66,11 @@ class InMemoryProcessService implements ProcessService {
             case "gh repo view repo --json latestRelease,licenseInfo,stargazerCount" -> {
                 (T) new RepositoryMetadataResponse(Optional.empty(), Optional.empty(), 1)
             }
-            case "gh pr list --repo repo --search \"assignee:@me OR review-requested:@me\" " +
+            case "gh pr list --repo repo --search \"is:open AND (author:@me OR review-requested:@me)\" " +
                     "--limit 1000 " +
                     "--json id,assignees,additions,author,changedFiles,closed,createdAt,deletions,isDraft,labels,mergeStateStatus,mergeable,number,state,statusCheckRollup,title,updatedAt,url" ->
                 (T) ImmutableList.of(newPullRequest("id-1"), newPullRequest("id-2"))
-            case "gh pr list --repo repo --search \"assignee:@me OR review-requested:@me\" --limit 1000 | wc -l"->
+            case "gh pr list --repo repo --search \"is:open AND (author:@me OR review-requested:@me)\" --limit 1000 | wc -l"->
                 (T) 1
             case "gh api /user/orgs --paginate" ->
                 (T) ImmutableList.of(newGithubOrganization("id-1"), newGithubOrganization("id-2"))

@@ -1,45 +1,52 @@
 package com.ozdece.gheasy.image.logic;
 
 import com.google.common.collect.ImmutableList;
-import com.ozdece.gheasy.GheasyApplication;
 import com.ozdece.gheasy.image.ImageService;
 import com.ozdece.gheasy.process.ProcessService;
-import com.typesafe.config.Config;
 import reactor.core.publisher.Mono;
 
 import javax.swing.*;
+import java.io.File;
+import java.net.URI;
 import java.util.Optional;
+
+import static com.ozdece.gheasy.GheasyApplication.IMAGES_FOLDER_PATH;
 
 public class ImageServiceImpl implements ImageService {
 
     private final ProcessService processService;
 
-    private final int SCALED_IMAGE_SIZE;
-
-    private final String GITHUB_AVATAR_PATH = GheasyApplication.CONFIG_FOLDER_PATH + "/github_avatar.png";
-
-    public ImageServiceImpl(ProcessService processService, Config appConfig) {
+    public ImageServiceImpl(ProcessService processService) {
         this.processService = processService;
-        SCALED_IMAGE_SIZE = appConfig.getInt("gheasy.images.avatar-scaled-image-size");
     }
 
     @Override
-    public Mono<Optional<ImageIcon>> saveGitHubAvatar(String avatarUrl) {
+    public Mono<Optional<File>> saveImage(String avatarUrl, int width, int height) {
         return Mono.fromCallable(() -> {
-                    final ImmutableList<String> ffmpegDownloadCommand = ImmutableList.of(
-                            "ffmpeg",
-                            "-y",
-                            "-i",
-                            avatarUrl,
-                            "-vf",
-                            String.format("scale=%d:%d", SCALED_IMAGE_SIZE, SCALED_IMAGE_SIZE),
-                            GITHUB_AVATAR_PATH
-                    );
-                    final ProcessBuilder processBuilder = new ProcessBuilder(ffmpegDownloadCommand);
+                    final String fileName = new URI(avatarUrl).toURL().getFile()
+                            .replaceAll("[^a-zA-Z0-9]+", "") + ".png";
+                    final String fileOutputPath = IMAGES_FOLDER_PATH + File.separator + fileName;
 
-                    return processService.getProcessExitCode(processBuilder);
+                    final ProcessBuilder processBuilder = generateImageProcessor(avatarUrl, width, height, fileOutputPath);
+
+                    return new SaveImageResult(fileOutputPath, processService.getProcessExitCode(processBuilder));
                 })
-                .map(exitCode -> exitCode == 0 ? Optional.of(new ImageIcon(GITHUB_AVATAR_PATH)) : Optional.empty());
+                .map(result -> result.exitCode() == 0 ? Optional.of(new File(result.outputPath())) : Optional.empty());
+    }
+
+    private ProcessBuilder generateImageProcessor(String avatarUrl, int width, int height, String fileOutputPath) {
+        final ImmutableList<String> ffmpegDownloadCommand = ImmutableList.of(
+                "ffmpeg",
+                "-y",
+                "-i",
+                avatarUrl,
+                "-vf",
+                String.format("scale=%d:%d", width, height),
+                fileOutputPath
+        );
+        return new ProcessBuilder(ffmpegDownloadCommand);
     }
 
 }
+
+record SaveImageResult(String outputPath, int exitCode) {}
