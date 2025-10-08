@@ -7,7 +7,7 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreeCellRenderer;
 import java.awt.*;
 
-public class GithubRepositoryTreeRenderer implements TreeCellRenderer {
+public class RepositoryTreeRenderer implements TreeCellRenderer {
 
     private DefaultTreeCellRenderer defaultRenderer = new DefaultTreeCellRenderer();
 

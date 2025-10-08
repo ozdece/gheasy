@@ -92,7 +92,7 @@ public class GheasyApplication {
                     System.exit(1);
                 })
                 .subscribe(githubUser -> {
-                    final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, repositoryService, pullRequestService, imageService, appConfig);
+                    final FrmMainDashboard frmMainDashboard = new FrmMainDashboard(githubUser, repositoryService, pullRequestService, imageService, authService, appConfig);
                     frmMainDashboard.setVisible(true);
                 });
 

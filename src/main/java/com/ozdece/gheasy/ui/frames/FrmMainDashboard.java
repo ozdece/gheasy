@@ -1,5 +1,6 @@
 package com.ozdece.gheasy.ui.frames;
 
+import com.ozdece.gheasy.github.auth.AuthService;
 import com.ozdece.gheasy.github.auth.model.GithubUser;
 import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequestStatus;
@@ -10,7 +11,7 @@ import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.ResourceLoader;
 import com.ozdece.gheasy.ui.SwingScheduler;
 import com.ozdece.gheasy.ui.models.GithubRepositoryTreeModel;
-import com.ozdece.gheasy.ui.renderers.GithubRepositoryTreeRenderer;
+import com.ozdece.gheasy.ui.renderers.RepositoryTreeRenderer;
 import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,7 @@ public class FrmMainDashboard extends JFrame {
     private final RepositoryService repositoryService;
     private final PullRequestService pullRequestService;
     private final ImageService imageService;
+    private final AuthService authService;
     private final Config config;
 
     private final JTree trRepoNavigator = new JTree();
@@ -55,6 +57,7 @@ public class FrmMainDashboard extends JFrame {
             RepositoryService repositoryService,
             PullRequestService pullRequestService,
             ImageService imageService,
+            AuthService authService,
             Config config
     ) {
         super(String.format("Gheasy | Dashboard, User: %s", githubUser.fullName().orElse(githubUser.username())));
@@ -66,6 +69,7 @@ public class FrmMainDashboard extends JFrame {
         this.repositoryService = repositoryService;
         this.pullRequestService = pullRequestService;
         this.imageService = imageService;
+        this.authService = authService;
         this.config = config;
 
         setLayout(new BorderLayout());
@@ -298,7 +302,7 @@ public class FrmMainDashboard extends JFrame {
         final JMenu helpMenu = new JMenu("Help");
 
         addRepositoryMenuItem.addActionListener(e -> {
-            DlgAddRepository dlgAddRepository = new DlgAddRepository(this, repositoryService);
+            DlgAddRepository dlgAddRepository = new DlgAddRepository(this, repositoryService, authService, imageService);
             dlgAddRepository.setVisible(true);
         });
 
@@ -332,7 +336,7 @@ public class FrmMainDashboard extends JFrame {
                 .subscribe(githubRepositories -> {
                     final GithubRepositoryTreeModel model = new GithubRepositoryTreeModel(githubRepositories);
                     trRepoNavigator.setModel(model);
-                    trRepoNavigator.setCellRenderer(new GithubRepositoryTreeRenderer());
+                    trRepoNavigator.setCellRenderer(new RepositoryTreeRenderer());
                 });
     }
 }
