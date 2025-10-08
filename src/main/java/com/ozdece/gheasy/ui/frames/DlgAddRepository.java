@@ -17,9 +17,16 @@ public class DlgAddRepository extends JDialog {
 
     private final JTextField txtSearchRepository = new JTextField();
 
+    private final JLabel lblLoadingRepositories = new JLabel("Loading Repositories...");
+
+    private final JButton btnSave = new JButton("Add Repository");
+    private final JButton btnClose = new JButton("Close");
+
     public DlgAddRepository(JFrame parent, RepositoryService repositoryService) {
         super(parent, true);
         setLayout(new BorderLayout());
+        setBounds(350, 200, 600, 600);
+        setTitle("Gheasy | Add Repository");
 
         this.repositoryService = repositoryService;
 
@@ -35,39 +42,70 @@ public class DlgAddRepository extends JDialog {
 
         final JScrollPane spLstOwnerRepositories = new JScrollPane(lstOwnerRepositories);
 
-        final JButton btnSave = new JButton("Add");
-        final JButton btnClose = new JButton("Close");
+        final JComponent bottomBar = buildBottomBar();
+
+        lblLoadingRepositories.setVisible(false);
 
         groupLayout.setHorizontalGroup(
                 groupLayout.createParallelGroup()
                         .addGroup(
                                 groupLayout.createSequentialGroup()
-                                        .addGap(5)
+                                        .addGap(20)
                                         .addComponent(lblAccessibleOwners)
-                                        .addComponent(cmbAccessibleOwners)
+                                        .addComponent(cmbAccessibleOwners, 250, 250, Integer.MAX_VALUE)
+                                        .addGap(20)
                         )
                         .addGroup(
                                 groupLayout.createSequentialGroup()
-                                        .addGap(5)
+                                        .addGap(20)
                                         .addComponent(lblSearchRepository)
-                                        .addComponent(txtSearchRepository)
-                                        .addGap(5)
+                                        .addComponent(txtSearchRepository, 250, 250, Integer.MAX_VALUE)
+                                        .addGap(25)
+                                        .addComponent(lblLoadingRepositories)
+                                        .addGap(20)
                         )
                         .addGroup(
                                 groupLayout.createSequentialGroup()
-                                        .addGap(5)
+                                        .addGap(20)
                                         .addComponent(spLstOwnerRepositories)
-                                        .addGap(5)
+                                        .addGap(20)
                         )
+                        .addComponent(bottomBar)
+        );
+
+        groupLayout.setVerticalGroup(
+                groupLayout.createSequentialGroup()
+                        .addGap(10)
                         .addGroup(
-                                groupLayout.createSequentialGroup()
-                                        .addComponent(btnSave)
-                                        .addComponent(btnClose)
+                                groupLayout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                                        .addComponent(lblAccessibleOwners)
+                                        .addComponent(cmbAccessibleOwners, 24, 24, 24)
                         )
+                        .addGap(10)
+                        .addGroup(
+                                groupLayout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                                        .addComponent(lblSearchRepository)
+                                        .addComponent(txtSearchRepository, 24, 24, 24)
+                                        .addComponent(lblLoadingRepositories)
+                        )
+                        .addGap(10)
+                        .addComponent(spLstOwnerRepositories)
+                        .addComponent(bottomBar, 30, 30, 30)
+                        .addGap(3)
         );
 
         centralPanel.setLayout(groupLayout);
         return centralPanel;
     }
 
+    private JComponent buildBottomBar() {
+        final JPanel bottomPanel = new JPanel();
+
+        bottomPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
+
+        bottomPanel.add(btnSave);
+        bottomPanel.add(btnClose);
+
+        return bottomPanel;
+    }
 }
