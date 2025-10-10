@@ -309,7 +309,7 @@ public class FrmMainDashboard extends JFrame {
                     imageService,
                     config
             );
-            
+
             dlgAddRepository.addRepositoryListener(addedRepo -> this.loadNavigatorTreeModel());
             dlgAddRepository.setVisible(true);
         });
@@ -344,7 +344,7 @@ public class FrmMainDashboard extends JFrame {
                 .subscribe(githubRepositories -> {
                     final GithubRepositoryTreeModel model = new GithubRepositoryTreeModel(githubRepositories);
                     trRepoNavigator.setModel(model);
-                    trRepoNavigator.setCellRenderer(new RepositoryTreeRenderer());
+                    trRepoNavigator.setCellRenderer(new RepositoryTreeRenderer(imageService));
                 });
     }
 }

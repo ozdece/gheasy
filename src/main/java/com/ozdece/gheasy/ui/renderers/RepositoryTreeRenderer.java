@@ -1,5 +1,6 @@
 package com.ozdece.gheasy.ui.renderers;
 
+import com.ozdece.gheasy.image.ImageService;
 import com.ozdece.gheasy.ui.models.tree.*;
 
 import javax.swing.*;
@@ -10,6 +11,11 @@ import java.awt.*;
 public class RepositoryTreeRenderer implements TreeCellRenderer {
 
     private DefaultTreeCellRenderer defaultRenderer = new DefaultTreeCellRenderer();
+    private final ImageService imageService;
+
+    public RepositoryTreeRenderer(ImageService imageService) {
+        this.imageService = imageService;
+    }
 
     @Override
     public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean expanded, boolean isLeaf, int row, boolean hasFocus) {
@@ -19,9 +25,16 @@ public class RepositoryTreeRenderer implements TreeCellRenderer {
         switch (node) {
             case OwnerTreeNode ownerTreeNode -> {
                 label.setText(ownerTreeNode.getOwner().name());
+
+                imageService
+                        .getImageFile(ownerTreeNode.getOwner().name() + ".png")
+                        .ifPresent(imageFile -> label.setIcon(new ImageIcon(imageFile.getAbsolutePath())));
             }
             case RepositoryTreeNode repositoryTreeNode -> {
                 label.setText(repositoryTreeNode.getGithubRepository().name());
+                imageService
+                        .getImageFile(repositoryTreeNode.getGithubRepository().owner().name() + ".png")
+                        .ifPresent(imageFile -> label.setIcon(new ImageIcon(imageFile.getAbsolutePath())));
             }
             case RepositoryTreeNodeLeaf leaf -> {
                 final String text = switch (leaf.getType()) {
