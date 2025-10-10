@@ -27,9 +27,10 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import static io.vavr.API.*;
 
@@ -55,6 +56,8 @@ public class DlgAddRepository extends JDialog {
 
     private final JButton btnSave = new JButton("Add Repository");
     private final JButton btnClose = new JButton("Close");
+
+    private final java.util.List<Consumer<Repository>> repositoryListeners = new ArrayList<>();
 
     private final Timer searchRepoTimer = new Timer(SEARCH_REPO_INPUT_ENTRY_DELAY_MS, this::onSearchRepoRequested);
 
@@ -97,6 +100,10 @@ public class DlgAddRepository extends JDialog {
         });
 
         loadAvailableOwners();
+    }
+
+    public void addRepositoryListener(Consumer<Repository> repositoryConsumer) {
+        this.repositoryListeners.add(repositoryConsumer);
     }
 
     private JComponent buildCentralPanel() {
@@ -175,8 +182,47 @@ public class DlgAddRepository extends JDialog {
         bottomPanel.add(btnClose);
 
         btnClose.addActionListener(e -> this.dispose());
+        btnSave.addActionListener(this::onSaveButtonClicked);
 
         return bottomPanel;
+    }
+
+    private void onSaveButtonClicked(ActionEvent e) {
+       final int selectedRepositoryIndex = lstOwnerRepositories.getSelectedIndex();
+
+       if (selectedRepositoryIndex == -1) {
+           JOptionPane.showMessageDialog(
+                   null,
+                   "No repository selected to add",
+                   DialogTitles.OPTION_PANE_ERROR_TITLE,
+                   JOptionPane.ERROR_MESSAGE
+           );
+
+           return;
+       }
+
+       final Repository selectedRepository = lstOwnerRepositories.getSelectedValue();
+
+       repositoryService.insertBookmark(selectedRepository)
+               .doOnError(err -> {
+                   logger.error("An error occurred while adding a new repository \"%s\"".formatted(selectedRepository.name()), err);
+
+                   JOptionPane.showMessageDialog(
+                           null,
+                           "An error occurred while adding a new repository\n" + err.getMessage(),
+                           DialogTitles.OPTION_PANE_ERROR_TITLE,
+                           JOptionPane.ERROR_MESSAGE
+                   );
+               })
+               .subscribeOn(Schedulers.boundedElastic())
+               .publishOn(SwingScheduler.edt())
+               .subscribe(addedRepository -> {
+                   logger.info("Repository {}/{} successfully bookmarked.", addedRepository.owner().name(), addedRepository.name());
+                   repositoryListeners
+                           .forEach(listener -> listener.accept(addedRepository));
+
+                    this.dispose();
+               });
     }
 
     private void loadAvailableOwners() {

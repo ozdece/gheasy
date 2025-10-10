@@ -309,6 +309,8 @@ public class FrmMainDashboard extends JFrame {
                     imageService,
                     config
             );
+            
+            dlgAddRepository.addRepositoryListener(addedRepo -> this.loadNavigatorTreeModel());
             dlgAddRepository.setVisible(true);
         });
 
