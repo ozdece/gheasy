@@ -25,6 +25,7 @@ public class RepositoryServiceImpl implements RepositoryService {
 
     private static final JsonMapper jsonMapper = GheasyObjectMapper.getDefaultJsonMapper();
     private static final int REPO_QUERY_LIMIT = 1000;
+    private static final String REPOSITORY_JSON_FIELDS = "id,name,description,url,owner,createdAt,language,visibility";
 
     public RepositoryServiceImpl(ProcessService processService, String configFolderPath) {
         this.processService = processService;
@@ -88,12 +89,15 @@ public class RepositoryServiceImpl implements RepositoryService {
     }
 
     @Override
-    public Mono<ImmutableSet<Repository>> searchRepositoriesByOwner(GithubOwner githubOwner, String query) {
+    public Mono<ImmutableList<Repository>> searchRepositoriesByOwner(GithubOwner githubOwner, String query) {
         final ProcessBuilder processBuilder = new ProcessBuilder(getSearchRepoByOwnerCommand(githubOwner, query));
-        final TypeReference<ImmutableSet<Repository>> typeReference = new TypeReference<>(){};
+        final TypeReference<ImmutableList<Repository>> typeReference = new TypeReference<>(){};
 
-        return Mono.fromCallable(() ->
-            processService.getThenParseProcessOutput(processBuilder, typeReference)
+        return Mono.fromCallable(() ->{
+
+            final var x= processService.getThenParseProcessOutput(processBuilder, typeReference);
+                    return x;
+                }
         );
     }
 
@@ -136,7 +140,17 @@ public class RepositoryServiceImpl implements RepositoryService {
     }
 
     private ImmutableList<String> getSearchRepoByOwnerCommand(GithubOwner owner, String query) {
-        return ImmutableList.of("gh", "search", "repos", "--owner=%s".formatted(owner.name()), "\"%s\"".formatted(query), "--limit", String.valueOf(REPO_QUERY_LIMIT));
+        return ImmutableList.of(
+                "gh",
+                "search",
+                "repos",
+                "--owner=%s".formatted(owner.name()),
+                "%s".formatted(query),
+                "--limit",
+                String.valueOf(REPO_QUERY_LIMIT),
+                "--json",
+                REPOSITORY_JSON_FIELDS
+                );
     }
 
 }

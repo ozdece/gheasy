@@ -302,7 +302,13 @@ public class FrmMainDashboard extends JFrame {
         final JMenu helpMenu = new JMenu("Help");
 
         addRepositoryMenuItem.addActionListener(e -> {
-            DlgAddRepository dlgAddRepository = new DlgAddRepository(this, repositoryService, authService, imageService);
+            final DlgAddRepository dlgAddRepository = new DlgAddRepository(
+                    this,
+                    repositoryService,
+                    authService,
+                    imageService,
+                    config
+            );
             dlgAddRepository.setVisible(true);
         });
 
@@ -319,7 +325,7 @@ public class FrmMainDashboard extends JFrame {
     private void updateGithubAvatar() {
         final int avatarSize = config.getInt("gheasy.images.avatar-scaled-image-size");;
 
-        imageService.saveImage(githubUser.avatarUrl(), avatarSize, avatarSize)
+        imageService.saveImage(githubUser.avatarUrl(), avatarSize, avatarSize, "%s_user_avatar.png".formatted(githubUser.username()))
                 .doOnError(err -> logger.error("An error occurred while saving Github avatar!", err))
                 .publishOn(SwingScheduler.edt())
                 .subscribeOn(Schedulers.boundedElastic())

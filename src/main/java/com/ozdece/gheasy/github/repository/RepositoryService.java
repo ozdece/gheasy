@@ -12,5 +12,5 @@ public interface RepositoryService {
     Mono<ImmutableSet<Repository>> removeBookmark(Repository repository);
     Mono<ImmutableSet<Repository>> getBookmarkedRepositories();
     Mono<RepositoryMetadata> getRepositoryMetadata(String repository);
-    Mono<ImmutableSet<Repository>> searchRepositoriesByOwner(GithubOwner githubOwner, String query);
+    Mono<ImmutableList<Repository>> searchRepositoriesByOwner(GithubOwner githubOwner, String query);
 }

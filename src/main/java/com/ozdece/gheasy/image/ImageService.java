@@ -7,5 +7,6 @@ import java.io.File;
 import java.util.Optional;
 
 public interface ImageService {
-    Mono<Optional<File>> saveImage(String avatarUrl, int width, int height);
+    Mono<Optional<File>> saveImage(String avatarUrl, int width, int height, String filename);
+    Optional<File> getImageFile(String filename);
 }

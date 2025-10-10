@@ -74,8 +74,9 @@ class InMemoryProcessService implements ProcessService {
                 (T) 1
             case "gh api /user/orgs --paginate" ->
                 (T) ImmutableList.of(newGithubOrganization("id-1"), newGithubOrganization("id-2"))
-            case "gh search repos --owner=Org \"testrepo\" --limit 1000" ->
-                (T) ImmutableSet.of(newGithubRepository("id-search"))
+            case "gh search repos --owner=Org testrepo --limit 1000 " +
+                 "--json id,name,description,url,owner,createdAt,language,visibility"->
+                (T) ImmutableList.of(newGithubRepository("id-search"))
             default -> null
         }
     }

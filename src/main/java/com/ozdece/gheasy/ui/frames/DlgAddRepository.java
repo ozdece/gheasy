@@ -10,7 +10,10 @@ import com.ozdece.gheasy.image.ImageService;
 import com.ozdece.gheasy.ui.DialogTitles;
 import com.ozdece.gheasy.ui.SwingScheduler;
 import com.ozdece.gheasy.ui.models.AvailableOwnerComboBoxModel;
+import com.ozdece.gheasy.ui.models.RepositoryListModel;
 import com.ozdece.gheasy.ui.renderers.AvailableOwnerListCellRenderer;
+import com.ozdece.gheasy.ui.renderers.RepositoryListCellRenderer;
+import com.typesafe.config.Config;
 import io.vavr.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +22,12 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.io.File;
 import java.util.Optional;
 
@@ -28,11 +36,14 @@ import static io.vavr.API.*;
 public class DlgAddRepository extends JDialog {
 
     private static final Logger logger = LoggerFactory.getLogger(DlgAddRepository.class);
-    private static final int OWNER_AVATAR_IMAGE_SIZE = 16;
+    private static final int SEARCH_REPO_INPUT_ENTRY_DELAY_MS = 700;
 
     private final RepositoryService repositoryService;
     private final ImageService imageService;
     private final AuthService authService;
+
+    private final int ownerAvatarImageSize;
+    private final int minCharacterToSearchRepos;
 
     private final JComboBox<GithubOwner> cmbAvailableOwners = new JComboBox<>();
 
@@ -45,22 +56,45 @@ public class DlgAddRepository extends JDialog {
     private final JButton btnSave = new JButton("Add Repository");
     private final JButton btnClose = new JButton("Close");
 
+    private final Timer searchRepoTimer = new Timer(SEARCH_REPO_INPUT_ENTRY_DELAY_MS, this::onSearchRepoRequested);
+
     public DlgAddRepository(
             JFrame parent,
             RepositoryService repositoryService,
             AuthService authService,
-            ImageService imageService
+            ImageService imageService,
+            Config config
     ) {
         super(parent, true);
         setLayout(new BorderLayout());
         setBounds(350, 200, 600, 600);
         setTitle("Gheasy | Add Repository");
 
+        searchRepoTimer.setRepeats(false);
+
         this.repositoryService = repositoryService;
         this.authService = authService;
         this.imageService = imageService;
+        this.ownerAvatarImageSize = config.getInt("gheasy.images.owner-avatar-image-size");
+        this.minCharacterToSearchRepos = config.getInt("gheasy.repository.min-character-to-search");
 
         this.add(buildCentralPanel(), BorderLayout.CENTER);
+
+        cmbAvailableOwners.addItemListener(this::onOwnerItemChanged);
+        txtSearchRepository.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                restartTimer();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                restartTimer();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {}
+        });
 
         loadAvailableOwners();
     }
@@ -140,6 +174,8 @@ public class DlgAddRepository extends JDialog {
         bottomPanel.add(btnSave);
         bottomPanel.add(btnClose);
 
+        btnClose.addActionListener(e -> this.dispose());
+
         return bottomPanel;
     }
 
@@ -172,11 +208,81 @@ public class DlgAddRepository extends JDialog {
     private Mono<ImmutableMap<GithubOwner, Optional<File>>> withOwnerAvatars(ImmutableList<GithubOwner> owners) {
         return Flux.fromIterable(owners)
                 .flatMap(owner -> imageService
-                        .saveImage(owner.avatarUrl(), OWNER_AVATAR_IMAGE_SIZE, OWNER_AVATAR_IMAGE_SIZE)
+                        .saveImage(owner.avatarUrl(), ownerAvatarImageSize, ownerAvatarImageSize, "%s.png".formatted(owner.name()))
                         .map(maybeImage -> Tuple(owner, maybeImage))
                 )
                 .subscribeOn(Schedulers.boundedElastic())
                 .collect(ImmutableMap.toImmutableMap(Tuple2::_1, Tuple2::_2));
+    }
+
+    private void restartTimer() {
+        if (searchRepoTimer.isRunning()) {
+            searchRepoTimer.restart();
+        } else {
+            searchRepoTimer.start();
+        }
+    }
+
+
+    private void onSearchRepoRequested(ActionEvent e) {
+        final int selectedOwnerIndex = cmbAvailableOwners.getSelectedIndex();
+
+        if (selectedOwnerIndex == -1) {
+            JOptionPane.showMessageDialog(
+                    null,
+                    "No repository owner chosen",
+                    DialogTitles.OPTION_PANE_ERROR_TITLE,
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+        final String searchText = txtSearchRepository.getText().trim();
+
+        if (searchText.length() < minCharacterToSearchRepos) {
+            return;
+        }
+
+        txtSearchRepository.setEnabled(false);
+        lstOwnerRepositories.setEnabled(false);
+        lstOwnerRepositories.setModel(new DefaultListModel<>());
+
+        final GithubOwner owner = cmbAvailableOwners.getItemAt(selectedOwnerIndex);
+
+        lblLoadingRepositories.setVisible(true);
+
+        repositoryService
+                .searchRepositoriesByOwner(owner, searchText)
+                .doOnError(err -> {
+                    logger.error(
+                            "An error occurred while retrieving search result for the query \"%s\" with owner \"%s\""
+                                    .formatted(searchText, owner.name()),
+                            err);
+                    JOptionPane.showMessageDialog(
+                            null,
+                            "An error occurred while retrieving search results for the repository owner \"%s\"\n%s".formatted(owner.name(), err.getMessage()),
+                            DialogTitles.OPTION_PANE_ERROR_TITLE,
+                            JOptionPane.ERROR_MESSAGE);
+                })
+                .publishOn(SwingScheduler.edt())
+                .subscribeOn(Schedulers.boundedElastic())
+                .subscribe(searchResults -> {
+                    final RepositoryListModel model = new RepositoryListModel(searchResults);
+                    final Optional<File> maybeOwnerIcon = imageService.getImageFile("%s.png".formatted(owner.name()));
+
+                    lstOwnerRepositories.setCellRenderer(new RepositoryListCellRenderer(maybeOwnerIcon));
+
+                    lstOwnerRepositories.setEnabled(true);
+                    lstOwnerRepositories.setModel(model);
+                    lblLoadingRepositories.setVisible(false);
+                    txtSearchRepository.setEnabled(true);
+                });
+
+    }
+
+    private void onOwnerItemChanged(ItemEvent e) {
+        txtSearchRepository.setText("");
+        lstOwnerRepositories.setModel(new DefaultListModel<>());
+        txtSearchRepository.requestFocusInWindow();
     }
 
 }

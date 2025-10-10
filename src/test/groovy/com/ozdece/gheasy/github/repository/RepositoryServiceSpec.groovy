@@ -135,12 +135,11 @@ class RepositoryServiceSpec extends Specification {
         final GithubOwner githubOwner = new GithubOwner(UserType.ORGANIZATION, "Org", "")
 
         when: 'repositories are being retrieved'
-        final Mono<ImmutableSet<Repository>> result = repositoryService.searchRepositoriesByOwner(githubOwner, query)
+        final Mono<ImmutableList<Repository>> result = repositoryService.searchRepositoriesByOwner(githubOwner, query)
 
         then: 'Search results should be present'
         StepVerifier.create(result)
-        .assertNext {set ->
-            final ImmutableList<Repository> list = set.stream().collect(ImmutableList.toImmutableList())
+        .assertNext {list ->
             assert list.size() == 1
             assert list.get(0).id() == "id-search"
         }
