@@ -17,12 +17,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class GithubRepositoryTreeModel implements TreeModel {
+public class RepositoryTreeModel implements TreeModel {
 
     private final RootRepositoryNode root;
     private final List<TreeModelListener> treeModelListeners = new ArrayList<>();
 
-    public GithubRepositoryTreeModel(ImmutableSet<Repository> githubRepositories) {
+    public RepositoryTreeModel(ImmutableSet<Repository> githubRepositories) {
        this.root = this.buildRepositoryTree(githubRepositories);
     }
 

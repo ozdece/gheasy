@@ -1,5 +1,6 @@
 package com.ozdece.gheasy.ui.frames;
 
+import com.google.common.collect.ImmutableSet;
 import com.ozdece.gheasy.github.auth.AuthService;
 import com.ozdece.gheasy.github.auth.model.GithubUser;
 import com.ozdece.gheasy.github.pullrequest.PullRequestService;
@@ -10,15 +11,18 @@ import com.ozdece.gheasy.image.ImageService;
 import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.ResourceLoader;
 import com.ozdece.gheasy.ui.SwingScheduler;
-import com.ozdece.gheasy.ui.models.GithubRepositoryTreeModel;
+import com.ozdece.gheasy.ui.models.RepositoryTreeModel;
 import com.ozdece.gheasy.ui.renderers.RepositoryTreeRenderer;
 import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
 import javax.swing.*;
 import java.awt.*;
+
+import static io.vavr.API.Tuple;
 
 public class FrmMainDashboard extends JFrame {
 
@@ -32,7 +36,6 @@ public class FrmMainDashboard extends JFrame {
 
     private final JTree trRepoNavigator = new JTree();
 
-    private final JComboBox<Repository> cmbGithubRepositories = new JComboBox<>();
     private final JComboBox<PullRequestStatus> chbActivePassivePRs = new JComboBox<>();
     private final JComboBox<String> chbPullRequestLabels = new JComboBox<>();
 
@@ -276,14 +279,11 @@ public class FrmMainDashboard extends JFrame {
         groupLayout.setHorizontalGroup(
                 groupLayout.createParallelGroup()
                         .addComponent(spRepoNavigator, 250, 250, Integer.MAX_VALUE)
-                        .addComponent(cmbGithubRepositories)
         );
 
         groupLayout.setVerticalGroup(
                 groupLayout.createSequentialGroup()
                         .addComponent(spRepoNavigator, 10, 10, Integer.MAX_VALUE)
-                        .addGap(3)
-                        .addComponent(cmbGithubRepositories, 30, 30, 30)
                         .addGap(2)
         );
 
@@ -342,9 +342,22 @@ public class FrmMainDashboard extends JFrame {
                 .publishOn(SwingScheduler.edt())
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe(githubRepositories -> {
-                    final GithubRepositoryTreeModel model = new GithubRepositoryTreeModel(githubRepositories);
+                    final RepositoryTreeModel model = new RepositoryTreeModel(githubRepositories);
+                    setupRepositoryStats(githubRepositories, model);
                     trRepoNavigator.setModel(model);
                     trRepoNavigator.setCellRenderer(new RepositoryTreeRenderer(imageService));
                 });
     }
+
+    private void setupRepositoryStats(ImmutableSet<Repository> repositories, RepositoryTreeModel repositoryTreeModel) {
+        Flux.fromIterable(repositories)
+                .flatMap(repo ->
+                        repositoryService.getRepositoryStats(repo)
+                                .map(stats -> Tuple(repo, stats))
+                )
+                .subscribeOn(Schedulers.boundedElastic())
+                .subscribe(statsTuple ->
+                        repositoryTreeModel.updateRepositoryStats(trRepoNavigator, statsTuple._1, statsTuple._2));
+    }
+
 }

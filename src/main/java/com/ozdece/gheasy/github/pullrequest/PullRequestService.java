@@ -2,11 +2,12 @@ package com.ozdece.gheasy.github.pullrequest;
 
 import com.google.common.collect.ImmutableList;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequest;
+import com.ozdece.gheasy.github.repository.model.Repository;
 import reactor.core.publisher.Mono;
 
 import java.io.File;
 
 public interface PullRequestService {
-    Mono<ImmutableList<PullRequest>> getPullRequests(String repository);
-    Mono<Integer> getAssignedPullRequestCount(String repository);
+    Mono<ImmutableList<PullRequest>> getPullRequests(Repository repository);
+    Mono<Integer> getAssignedPullRequestCount(Repository repository);
 }

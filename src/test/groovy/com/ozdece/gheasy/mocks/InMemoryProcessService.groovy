@@ -11,7 +11,6 @@ import com.ozdece.gheasy.github.pullrequest.model.MergeableState
 import com.ozdece.gheasy.github.pullrequest.model.PullRequest
 import com.ozdece.gheasy.github.pullrequest.model.PullRequestAuthor
 import com.ozdece.gheasy.github.pullrequest.model.PullRequestStatus
-import com.ozdece.gheasy.github.repository.RepositoryServiceSpec
 
 import com.ozdece.gheasy.github.repository.model.Repository
 import com.ozdece.gheasy.github.repository.model.RepositoryOwner
@@ -63,14 +62,14 @@ class InMemoryProcessService implements ProcessService {
                     "licenseInfo,name,nameWithOwner,owner,primaryLanguage,url,visibility" -> {
                 (T) newGithubRepository("id")
             }
-            case "gh repo view repo --json latestRelease,licenseInfo,stargazerCount" -> {
+            case "gh repo view ozdece/gheasy --json latestRelease,licenseInfo,stargazerCount" -> {
                 (T) new RepositoryMetadataResponse(Optional.empty(), Optional.empty(), 1)
             }
-            case "gh pr list --repo repo --search \"is:open AND (author:@me OR review-requested:@me)\" " +
+            case "gh pr list --repo ozdece/gheasy --search \"is:open AND (author:@me OR review-requested:@me)\" " +
                     "--limit 1000 " +
                     "--json id,assignees,additions,author,changedFiles,closed,createdAt,deletions,isDraft,labels,mergeStateStatus,mergeable,number,state,statusCheckRollup,title,updatedAt,url" ->
                 (T) ImmutableList.of(newPullRequest("id-1"), newPullRequest("id-2"))
-            case "gh pr list --repo repo --search \"is:open AND (author:@me OR review-requested:@me)\" --limit 1000 | wc -l"->
+            case "gh pr list --repo ozdece/gheasy --search \"is:open AND (author:@me OR review-requested:@me)\" --limit 1000 | wc -l"->
                 (T) 1
             case "gh api /user/orgs --paginate" ->
                 (T) ImmutableList.of(newGithubOrganization("id-1"), newGithubOrganization("id-2"))

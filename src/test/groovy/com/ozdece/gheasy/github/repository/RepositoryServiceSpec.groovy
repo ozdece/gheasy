@@ -119,7 +119,7 @@ class RepositoryServiceSpec extends Specification {
 
     def "should retrieve the repository metadata successfully"() {
         when: 'trying to fetch the Github repository metadata'
-        Mono<RepositoryMetadata> metadataRepository = repositoryService.getRepositoryMetadata("repo")
+        Mono<RepositoryMetadata> metadataRepository = repositoryService.getRepositoryMetadata(newGithubRepository("test-id"))
 
         then: 'Metadata should be retrieved successfully'
         StepVerifier.create(metadataRepository)

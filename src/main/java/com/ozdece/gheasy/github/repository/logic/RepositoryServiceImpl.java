@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.ozdece.gheasy.github.auth.model.GithubOwner;
+import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.repository.model.Repository;
 import com.ozdece.gheasy.github.repository.RepositoryService;
 import com.ozdece.gheasy.github.repository.model.RepositoryMetadata;
+import com.ozdece.gheasy.github.repository.model.RepositoryStats;
 import com.ozdece.gheasy.github.repository.model.response.RepositoryMetadataResponse;
 import com.ozdece.gheasy.github.repository.model.response.LicenseInfoResponse;
 import com.ozdece.gheasy.json.GheasyObjectMapper;
@@ -20,6 +22,7 @@ import java.nio.file.Files;
 public class RepositoryServiceImpl implements RepositoryService {
 
     private final ProcessService processService;
+    private final PullRequestService pullRequestService;
 
     private final String bookmarkFilePath;
 
@@ -27,8 +30,10 @@ public class RepositoryServiceImpl implements RepositoryService {
     private static final int REPO_QUERY_LIMIT = 1000;
     private static final String REPOSITORY_JSON_FIELDS = "id,name,description,url,owner,createdAt,language,visibility";
 
-    public RepositoryServiceImpl(ProcessService processService, String configFolderPath) {
+    public RepositoryServiceImpl(ProcessService processService, PullRequestService pullRequestService, String configFolderPath) {
         this.processService = processService;
+        this.pullRequestService = pullRequestService;
+
         bookmarkFilePath = configFolderPath + "/bookmarks.json";
     }
 
@@ -79,8 +84,8 @@ public class RepositoryServiceImpl implements RepositoryService {
     }
 
     @Override
-    public Mono<RepositoryMetadata> getRepositoryMetadata(String repository) {
-        return getRepositoryMetadataResponse(repository)
+    public Mono<RepositoryMetadata> getRepositoryMetadata(Repository repository) {
+        return getRepositoryMetadataResponse(repository.owner().name(), repository.name())
                 .map(response -> new RepositoryMetadata(
                         response.latestRelease(),
                         response.stargazerCount(),
@@ -93,16 +98,19 @@ public class RepositoryServiceImpl implements RepositoryService {
         final ProcessBuilder processBuilder = new ProcessBuilder(getSearchRepoByOwnerCommand(githubOwner, query));
         final TypeReference<ImmutableList<Repository>> typeReference = new TypeReference<>(){};
 
-        return Mono.fromCallable(() ->{
-
-            final var x= processService.getThenParseProcessOutput(processBuilder, typeReference);
-                    return x;
-                }
+        return Mono.fromCallable(() ->
+            processService.getThenParseProcessOutput(processBuilder, typeReference)
         );
     }
 
-    private Mono<RepositoryMetadataResponse> getRepositoryMetadataResponse(String repository) {
-       final ProcessBuilder processBuilder = new ProcessBuilder(getRepoMetadataCommand(repository));
+    @Override
+    public Mono<RepositoryStats> getRepositoryStats(Repository repository) {
+        return pullRequestService.getAssignedPullRequestCount(repository)
+                .map(pullRequestCount -> new RepositoryStats(pullRequestCount, 0));
+    }
+
+    private Mono<RepositoryMetadataResponse> getRepositoryMetadataResponse(String owner, String repository) {
+       final ProcessBuilder processBuilder = new ProcessBuilder(getRepoMetadataCommand(owner, repository));
 
        return Mono.fromCallable(() -> processService.getThenParseProcessOutput(processBuilder, RepositoryMetadataResponse.class));
     }
@@ -135,8 +143,8 @@ public class RepositoryServiceImpl implements RepositoryService {
                 .build();
     }
 
-    private ImmutableList<String> getRepoMetadataCommand(String repository) {
-        return ImmutableList.of("gh", "repo", "view", repository, "--json", "latestRelease,licenseInfo,stargazerCount");
+    private ImmutableList<String> getRepoMetadataCommand(String owner, String repository) {
+        return ImmutableList.of("gh", "repo", "view", "%s/%s".formatted(owner, repository), "--json", "latestRelease,licenseInfo,stargazerCount");
     }
 
     private ImmutableList<String> getSearchRepoByOwnerCommand(GithubOwner owner, String query) {

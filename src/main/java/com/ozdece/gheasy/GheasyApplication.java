@@ -42,8 +42,8 @@ public class GheasyApplication {
     private static final OrganizationService organizationService = new OrganizationServiceImpl(processService);
     private static final AuthService authService = new AuthServiceImpl(processService, organizationService);
     private static final ImageService imageService = new ImageServiceImpl(processService);
-    private static final RepositoryService repositoryService = new RepositoryServiceImpl(processService, GheasyApplication.CONFIG_FOLDER_PATH);
     private static final PullRequestService pullRequestService = new PullRequestServiceImpl(processService);
+    private static final RepositoryService repositoryService = new RepositoryServiceImpl(processService, pullRequestService, GheasyApplication.CONFIG_FOLDER_PATH);
 
     private static final ImmutableSet<String> MANDATORY_APPS_TO_BE_PRESENT = ImmutableSet.of("git", "gh");
 
