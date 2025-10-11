@@ -36,9 +36,6 @@ class PullRequestServiceSpec extends Specification {
     }
 
     def "should get number of assigned pull requests"() {
-        given: 'A repository name'
-        final String repository = "repo"
-
         when: 'Retrieving the number of assigned PRs'
         Mono<Integer> result = pullRequestService.getAssignedPullRequestCount(newGithubRepository("idid"))
 

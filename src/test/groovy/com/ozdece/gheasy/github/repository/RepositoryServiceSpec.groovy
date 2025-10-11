@@ -4,6 +4,8 @@ import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSet
 import com.ozdece.gheasy.github.auth.model.GithubOwner
 import com.ozdece.gheasy.github.auth.model.UserType
+import com.ozdece.gheasy.github.pullrequest.PullRequestService
+import com.ozdece.gheasy.github.pullrequest.logic.PullRequestServiceImpl
 import com.ozdece.gheasy.github.repository.logic.RepositoryServiceImpl
 import com.ozdece.gheasy.github.repository.model.RepositoryMetadata
 
@@ -23,7 +25,8 @@ class RepositoryServiceSpec extends Specification {
     static String TEST_FILES_DIR = System.getProperty("java.io.tmpdir") + "/gheasy"
 
     final ProcessService processService = new InMemoryProcessService()
-    final RepositoryService repositoryService = new RepositoryServiceImpl(processService, TEST_FILES_DIR)
+    final PullRequestService pullRequestService = new PullRequestServiceImpl(processService);
+    final RepositoryService repositoryService = new RepositoryServiceImpl(processService, pullRequestService, TEST_FILES_DIR)
 
     def setupSpec() {
         final File tmpFile = new File(TEST_FILES_DIR)

@@ -89,7 +89,10 @@ public class RepositoryTreeRenderer implements TreeCellRenderer {
 
                 label.setText(text);
             }
-            case RootRepositoryNode rootRepositoryNode -> label.setText("Repositories");
+            case RootRepositoryNode rootRepositoryNode -> {
+                label.setFont(Fonts.DEFAULT_FONT);
+                label.setText("Repositories");
+            }
         }
 
         return label;

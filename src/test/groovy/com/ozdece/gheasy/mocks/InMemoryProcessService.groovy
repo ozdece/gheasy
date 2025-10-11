@@ -46,7 +46,12 @@ class InMemoryProcessService implements ProcessService {
 
     @Override
     String getProcessOutput(ProcessBuilder processBuilder) throws IOException, InterruptedException {
-        return null;
+        final String command = processBuilder.command().stream().collect(Collectors.joining(" "));
+        return switch (command) {
+            case "gh pr list --repo ozdece/gheasy --search is:open AND author:@me OR review-requested:@me --limit 1000"->
+                "one"
+            default -> null
+        }
     }
 
     @Override
@@ -65,12 +70,10 @@ class InMemoryProcessService implements ProcessService {
             case "gh repo view ozdece/gheasy --json latestRelease,licenseInfo,stargazerCount" -> {
                 (T) new RepositoryMetadataResponse(Optional.empty(), Optional.empty(), 1)
             }
-            case "gh pr list --repo ozdece/gheasy --search \"is:open AND (author:@me OR review-requested:@me)\" " +
+            case "gh pr list --repo ozdece/gheasy --search is:open AND author:@me OR review-requested:@me " +
                     "--limit 1000 " +
                     "--json id,assignees,additions,author,changedFiles,closed,createdAt,deletions,isDraft,labels,mergeStateStatus,mergeable,number,state,statusCheckRollup,title,updatedAt,url" ->
                 (T) ImmutableList.of(newPullRequest("id-1"), newPullRequest("id-2"))
-            case "gh pr list --repo ozdece/gheasy --search \"is:open AND (author:@me OR review-requested:@me)\" --limit 1000 | wc -l"->
-                (T) 1
             case "gh api /user/orgs --paginate" ->
                 (T) ImmutableList.of(newGithubOrganization("id-1"), newGithubOrganization("id-2"))
             case "gh search repos --owner=Org testrepo --limit 1000 " +
