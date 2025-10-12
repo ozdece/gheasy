@@ -13,6 +13,8 @@ import com.ozdece.gheasy.github.repository.RepositoryService;
 import com.ozdece.gheasy.github.repository.logic.RepositoryServiceImpl;
 import com.ozdece.gheasy.image.ImageService;
 import com.ozdece.gheasy.image.logic.ImageServiceImpl;
+import com.ozdece.gheasy.notification.NotificationService;
+import com.ozdece.gheasy.notification.logic.NotifySendNotificationService;
 import com.ozdece.gheasy.process.ProcessService;
 import com.ozdece.gheasy.process.ProcessServiceImpl;
 import com.ozdece.gheasy.ui.frames.FrmMainDashboard;
@@ -44,6 +46,7 @@ public class GheasyApplication {
     private static final ImageService imageService = new ImageServiceImpl(processService);
     private static final PullRequestService pullRequestService = new PullRequestServiceImpl(processService);
     private static final RepositoryService repositoryService = new RepositoryServiceImpl(processService, pullRequestService, GheasyApplication.CONFIG_FOLDER_PATH);
+    private static final NotificationService notificationService = new NotifySendNotificationService(processService);
 
     private static final ImmutableSet<String> MANDATORY_APPS_TO_BE_PRESENT = ImmutableSet.of("git", "gh");
 
