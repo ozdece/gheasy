@@ -15,16 +15,24 @@ import com.ozdece.gheasy.ui.models.PullRequestLabelComboBoxModel;
 import com.ozdece.gheasy.ui.models.PullRequestsTableModel;
 import com.ozdece.gheasy.ui.renderers.PullRequestLabelListCellRenderer;
 import com.ozdece.gheasy.ui.renderers.PullRequestsTableCellRenderer;
+import com.ozdece.gheasy.ui.rowfilter.BasicRowFilters;
+import com.ozdece.gheasy.ui.rowfilter.BooleanRowFilter;
 import com.ozdece.gheasy.web.URLBrowser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.scheduler.Schedulers;
 
 import javax.swing.*;
+import javax.swing.event.CaretEvent;
+import javax.swing.table.TableModel;
+import javax.swing.table.TableRowSorter;
 
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Optional;
 
 public class PullRequestPanel extends JPanel implements TabPanel {
 
@@ -41,6 +49,8 @@ public class PullRequestPanel extends JPanel implements TabPanel {
 
     private final Repository repository;
     private final RepositoryStats repositoryStats;
+
+    private Optional<TableRowSorter<PullRequestsTableModel>> maybeRowSorter = Optional.empty();
 
     private static final Logger logger = LoggerFactory.getLogger(PullRequestPanel.class);
 
@@ -76,6 +86,7 @@ public class PullRequestPanel extends JPanel implements TabPanel {
                         .forEach(cmbActivePassivePRs::addItem);
 
         cmbActivePassivePRs.setSelectedIndex(-1);
+        cmbActivePassivePRs.addItemListener(this::onActivePassivePRItemSelected);
 
         btnViewAll.addActionListener(e -> {
             final String url = "%s/pulls".formatted(repository.url());
@@ -93,6 +104,8 @@ public class PullRequestPanel extends JPanel implements TabPanel {
                     .subscribeOn(Schedulers.parallel())
                     .subscribe();
         });
+
+        txtSearchPullRequest.addCaretListener(this::onSearchTextUpdated);
 
         groupLayout.setHorizontalGroup(
                 groupLayout.createParallelGroup()
@@ -175,6 +188,11 @@ public class PullRequestPanel extends JPanel implements TabPanel {
                     tblPullRequests.setModel(model);
                     tblPullRequests.setDefaultRenderer(Object.class, renderer);
 
+                    final TableRowSorter<PullRequestsTableModel> rowSorter = new TableRowSorter<>(model);
+
+                    maybeRowSorter = Optional.of(rowSorter);
+                    tblPullRequests.setRowSorter(rowSorter);
+
                     setupPullRequestLabelComboBox(pullRequests);
 
                     arrangeColumnSizes();
@@ -193,6 +211,23 @@ public class PullRequestPanel extends JPanel implements TabPanel {
        cmbPullRequestLabels.setRenderer(new PullRequestLabelListCellRenderer());
     }
 
+    private void triggerRowFiltering() {
+        final String searchText = txtSearchPullRequest.getText().trim();
+
+        final RowFilter<TableModel, Integer> searchRowFilter = BasicRowFilters.caseInsensitiveRegexFilter(searchText);
+        final RowFilter<TableModel, Integer> activeDraftPRFilter = cmbActivePassivePRs.getSelectedIndex() == -1
+                ? RowFilter.regexFilter("")
+                : switch ((PullRequestType) cmbActivePassivePRs.getSelectedItem()) {
+            case ACTIVE -> new BooleanRowFilter(true, 1);
+            case DRAFT -> new BooleanRowFilter(false, 1);
+        };
+
+        maybeRowSorter.ifPresent(rowSorter ->
+                rowSorter
+                        .setRowFilter(RowFilter.andFilter(ImmutableSet.of(searchRowFilter, activeDraftPRFilter)))
+        );
+    }
+
     private void arrangeColumnSizes() {
         tblPullRequests.getColumnModel().getColumn(0).setMinWidth(50);
         tblPullRequests.getColumnModel().getColumn(1).setMinWidth(30);
@@ -203,6 +238,14 @@ public class PullRequestPanel extends JPanel implements TabPanel {
         tblPullRequests.getColumnModel().getColumn(6).setMinWidth(120);
         tblPullRequests.getColumnModel().getColumn(7).setMinWidth(30);
         tblPullRequests.getColumnModel().getColumn(8).setMinWidth(60);
+    }
+
+    private void onSearchTextUpdated(CaretEvent e) {
+       triggerRowFiltering();
+    }
+
+    private void onActivePassivePRItemSelected(ItemEvent e) {
+        triggerRowFiltering();
     }
 
     @Override

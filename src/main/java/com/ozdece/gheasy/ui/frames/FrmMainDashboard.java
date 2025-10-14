@@ -15,7 +15,6 @@ import com.ozdece.gheasy.ui.ResourceLoader;
 import com.ozdece.gheasy.ui.SwingScheduler;
 import com.ozdece.gheasy.ui.models.RepositoryTreeModel;
 import com.ozdece.gheasy.ui.models.tree.GithubRepositoryTreeNode;
-import com.ozdece.gheasy.ui.models.tree.RepositoryTreeNode;
 import com.ozdece.gheasy.ui.models.tree.RepositoryTreeNodeLeaf;
 import com.ozdece.gheasy.ui.models.tree.RepositoryTreeNodeType;
 import com.ozdece.gheasy.ui.tabpanels.PullRequestPanel;
@@ -58,6 +57,7 @@ public class FrmMainDashboard extends JFrame {
     private final JTabbedPane tabbedPane = new JTabbedPane();
 
     private static final Logger logger = LoggerFactory.getLogger(FrmMainDashboard.class);
+
 
     public FrmMainDashboard(
             GithubUser githubUser,
@@ -278,7 +278,7 @@ public class FrmMainDashboard extends JFrame {
     }
 
     private void updateGithubAvatar() {
-        final int avatarSize = config.getInt("gheasy.images.avatar-scaled-image-size");;
+        final int avatarSize = config.getInt("gheasy.images.avatar-scaled-image-size");
 
         imageService.saveImage(githubUser.avatarUrl(), avatarSize, avatarSize, "%s_user_avatar.png".formatted(githubUser.username()))
                 .doOnError(err -> logger.error("An error occurred while saving Github avatar!", err))
