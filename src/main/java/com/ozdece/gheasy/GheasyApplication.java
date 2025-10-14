@@ -1,6 +1,6 @@
 package com.ozdece.gheasy;
 
-import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.FlatDarkLaf;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.ozdece.gheasy.github.auth.AuthService;
@@ -52,7 +52,7 @@ public class GheasyApplication {
 
     public static void main(String[] args) {
         //Set up the theme
-        FlatLightLaf.setup();
+        FlatDarkLaf.setup();
 
         ImmutableSet.of(CONFIG_FOLDER_PATH, IMAGES_FOLDER_PATH)
                 .forEach(path -> {

@@ -25,7 +25,7 @@ public record PullRequest(
         @JsonProperty("state")
         PullRequestStatus status,
         ImmutableSet<PullRequestLabel> labels,
-        ImmutableList<CheckRun> statusCheckRollup,
+        ImmutableList<StatusCheckRollup> statusCheckRollup,
         MergeStateStatus mergeStateStatus,
         @JsonProperty("mergeable")
         MergeableState mergeableState

@@ -1,12 +1,21 @@
-package com.ozdece.gheasy.ui.panels;
+package com.ozdece.gheasy.ui.tabpanels;
 
 import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequestStatus;
+import com.ozdece.gheasy.github.repository.model.Repository;
+import com.ozdece.gheasy.github.repository.model.RepositoryStats;
+import com.ozdece.gheasy.ui.DialogTitles;
 import com.ozdece.gheasy.ui.Fonts;
+import com.ozdece.gheasy.ui.SwingScheduler;
+import com.ozdece.gheasy.ui.models.PullRequestsTableModel;
+import com.ozdece.gheasy.ui.renderers.PullRequestsTableCellRenderer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.core.scheduler.Schedulers;
 
 import javax.swing.*;
 
-public class PullRequestPanel extends JPanel {
+public class PullRequestPanel extends JPanel implements TabPanel {
 
     private final PullRequestService pullRequestService;
 
@@ -19,9 +28,18 @@ public class PullRequestPanel extends JPanel {
     private final JComboBox<PullRequestStatus> cmbActivePassivePRs = new JComboBox<>();
     private final JComboBox<String> cmbPullRequestLabels = new JComboBox<>();
 
-    public PullRequestPanel(PullRequestService pullRequestService) {
+    private final Repository repository;
+    private final RepositoryStats repositoryStats;
+
+    private static final Logger logger = LoggerFactory.getLogger(PullRequestPanel.class);
+
+    public PullRequestPanel(PullRequestService pullRequestService, Repository repository, RepositoryStats repositoryStats) {
         this.pullRequestService = pullRequestService;
+        this.repository = repository;
+        this.repositoryStats = repositoryStats;
+
         setupPanel();
+        loadPullRequests();
     }
 
     private void setupPanel() {
@@ -37,6 +55,8 @@ public class PullRequestPanel extends JPanel {
 
         lblPullRequests.setFont(Fonts.withSize(14));
         lblPullRequestCount.setFont(Fonts.withSize(14));
+
+        lblPullRequestCount.setText(String.valueOf(repositoryStats.pullRequestCount()));
 
         groupLayout.setHorizontalGroup(
                 groupLayout.createParallelGroup()
@@ -98,4 +118,31 @@ public class PullRequestPanel extends JPanel {
         this.setLayout(groupLayout);
     }
 
+    private void loadPullRequests() {
+        pullRequestService.getPullRequests(repository)
+                .doOnError(err -> {
+                    logger.error("Unable to retrieve pull requests for the repository {}", repository.name(), err);
+                    JOptionPane.showMessageDialog(
+                            null,
+                            "Unable to retrieve pull requests for the repository \"%s\"\n%s"
+                                    .formatted(repository.name(), err.getMessage()),
+                            DialogTitles.OPTION_PANE_ERROR_TITLE,
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .publishOn(SwingScheduler.edt())
+                .subscribe(pullRequests -> {
+                    final PullRequestsTableModel model = new PullRequestsTableModel(pullRequests);
+                    final PullRequestsTableCellRenderer renderer = new PullRequestsTableCellRenderer(pullRequests);
+
+                    tblPullRequests.setModel(model);
+                    tblPullRequests.setDefaultRenderer(Object.class, renderer);
+                });
+    }
+
+    @Override
+    public String getTabId() {
+        return "PullRequests-%s".formatted(repository.id());
+    }
 }

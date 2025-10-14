@@ -71,8 +71,8 @@ public class RepositoryListCellRenderer implements ListCellRenderer<Repository> 
             card.setBackground(list.getBackground());
             card.setForeground(Color.WHITE);
             lblRepoTitle.setForeground(Color.GREEN.darker());
-            lblLanguage.setForeground(Color.BLACK);
-            lblDescription.setForeground(Color.BLACK);
+            lblLanguage.setForeground(Color.WHITE);
+            lblDescription.setForeground(Color.WHITE);
         }
 
         return card;

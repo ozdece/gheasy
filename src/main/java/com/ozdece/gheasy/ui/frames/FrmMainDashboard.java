@@ -1,16 +1,24 @@
 package com.ozdece.gheasy.ui.frames;
 
 import com.google.common.collect.ImmutableSet;
+import com.ozdece.gheasy.datetime.ZoneBasedDateTimeFormatter;
 import com.ozdece.gheasy.github.auth.AuthService;
 import com.ozdece.gheasy.github.auth.model.GithubUser;
 import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.repository.RepositoryService;
 import com.ozdece.gheasy.github.repository.model.Repository;
+import com.ozdece.gheasy.github.repository.model.RepositoryStats;
 import com.ozdece.gheasy.image.ImageService;
+import com.ozdece.gheasy.ui.DialogTitles;
 import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.ResourceLoader;
 import com.ozdece.gheasy.ui.SwingScheduler;
 import com.ozdece.gheasy.ui.models.RepositoryTreeModel;
+import com.ozdece.gheasy.ui.models.tree.GithubRepositoryTreeNode;
+import com.ozdece.gheasy.ui.models.tree.RepositoryTreeNode;
+import com.ozdece.gheasy.ui.models.tree.RepositoryTreeNodeLeaf;
+import com.ozdece.gheasy.ui.models.tree.RepositoryTreeNodeType;
+import com.ozdece.gheasy.ui.tabpanels.PullRequestPanel;
 import com.ozdece.gheasy.ui.renderers.RepositoryTreeRenderer;
 import com.typesafe.config.Config;
 import org.slf4j.Logger;
@@ -19,7 +27,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
 import javax.swing.*;
+import javax.swing.tree.TreePath;
 import java.awt.*;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.util.Optional;
 
 import static io.vavr.API.Tuple;
 
@@ -35,12 +47,13 @@ public class FrmMainDashboard extends JFrame {
 
     private final JTree trRepoNavigator = new JTree();
 
-    private final JLabel lblBranch = new JLabel("<branch_name>");
     private final JLabel lblLastSyncTime = new JLabel("Last Sync Time: xxx");
     private final JLabel lblLastRelease = new JLabel();
     private final JLabel lblLicense = new JLabel();
     private final JLabel lblRepoStars = new JLabel();
     private final JLabel lblGithubUser = new JLabel();
+    private final JLabel lblPrimaryLanguage = new JLabel();
+    private final JLabel lblOwnerWithName = new JLabel("<repository>");
 
     private final JTabbedPane tabbedPane = new JTabbedPane();
 
@@ -80,7 +93,6 @@ public class FrmMainDashboard extends JFrame {
         final JPanel centralPanel = new JPanel();
         final GroupLayout groupLayout = new GroupLayout(centralPanel);
 
-        final JLabel lblOwnerWithName = new JLabel("<repository>");
 
         final String githubUserFullNameText = githubUser.fullName()
                 .map(fullName -> "%s (%s)".formatted(fullName, githubUser.username()))
@@ -91,14 +103,9 @@ public class FrmMainDashboard extends JFrame {
         lblOwnerWithName.setFont(Fonts.boldFontWithSize(20));
 
         lblGithubUser.setText(githubUserFullNameText);
+
         lblGithubUser.setFont(Fonts.withSize(14));
-
-        lblBranch.setFont(Fonts.withSize(14));
-        lblBranch.setForeground(Color.YELLOW.darker());
-
-        final JLabel lblPrimaryLanguage = new JLabel("Primary Language");
         lblPrimaryLanguage.setFont(Fonts.withSize(14));
-
         lblLastRelease.setFont(Fonts.withSize(14));
         lblLicense.setFont(Fonts.withSize(14));
         lblRepoStars.setFont(Fonts.withSize(14));
@@ -111,6 +118,33 @@ public class FrmMainDashboard extends JFrame {
                 .ifPresent(lblRepoStars::setIcon);
 
         tbBottomBar.add(lblLastSyncTime);
+
+        setRepositoryLabelsVisible(false);
+
+        trRepoNavigator.addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() != 2)
+                    return;
+
+                final TreePath maybePath = trRepoNavigator.getPathForLocation(e.getX(), e.getY());
+
+                Optional.ofNullable(maybePath)
+                        .ifPresent(path -> {
+                            final GithubRepositoryTreeNode node = (GithubRepositoryTreeNode) path.getLastPathComponent();
+                            loadTab(node);
+                        });
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {}
+            @Override
+            public void mouseReleased(MouseEvent e) {}
+            @Override
+            public void mouseEntered(MouseEvent e) {}
+            @Override
+            public void mouseExited(MouseEvent e) {}
+        });
 
         groupLayout.setHorizontalGroup(
                 groupLayout.createParallelGroup()
@@ -133,8 +167,6 @@ public class FrmMainDashboard extends JFrame {
                                         .addComponent(lblLastRelease)
                                         .addGap(14)
                                         .addComponent(lblRepoStars)
-                                        .addGap(14)
-                                        .addComponent(lblBranch)
                                         .addGap(0, 0, Short.MAX_VALUE)
                                         .addComponent(lblLicense)
                                         .addGap(10)
@@ -161,7 +193,6 @@ public class FrmMainDashboard extends JFrame {
                                 groupLayout.createParallelGroup(GroupLayout.Alignment.CENTER)
                                         .addComponent(lblLastRelease)
                                         .addComponent(lblRepoStars)
-                                        .addComponent(lblBranch)
                                         .addComponent(lblLicense)
                         )
                         .addGap(5)
@@ -182,6 +213,14 @@ public class FrmMainDashboard extends JFrame {
 
         centralPanel.setLayout(groupLayout);
         return centralPanel;
+    }
+
+    private void setRepositoryLabelsVisible(boolean visible) {
+        lblPrimaryLanguage.setVisible(visible);
+        lblOwnerWithName.setVisible(visible);
+        lblLicense.setVisible(visible);
+        lblLastRelease.setVisible(visible);
+        lblRepoStars.setVisible(visible);
     }
 
     private JComponent buildLeftPanel() {
@@ -272,6 +311,56 @@ public class FrmMainDashboard extends JFrame {
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe(statsTuple ->
                         repositoryTreeModel.updateRepositoryStats(trRepoNavigator, statsTuple._1, statsTuple._2));
+    }
+
+    private void loadTab(GithubRepositoryTreeNode node) {
+       switch (node) {
+           case RepositoryTreeNodeLeaf leaf
+                   when leaf.getType() == RepositoryTreeNodeType.PULL_REQUEST -> loadRepositoryPullRequestsTab(leaf);
+           default -> {}
+       }
+    }
+
+    private void loadRepositoryPullRequestsTab(RepositoryTreeNodeLeaf leaf) {
+        final RepositoryStats repositoryStats = leaf.repositoryTreeNode().getRepositoryStats();
+        final Repository repository = leaf.repositoryTreeNode().getGithubRepository();
+
+        final PullRequestPanel pullRequestPanel = new PullRequestPanel(pullRequestService, repository, repositoryStats);
+
+        repositoryService.getRepositoryMetadata(repository)
+                .doOnError(err -> {
+                    logger.error("Unable to retrieve repository metadata for the repository {}", repository.name(), err);
+                    JOptionPane.showMessageDialog(
+                            null,
+                            "Unable to retrieve repository metatada for the repository %s/%s\n%s"
+                                    .formatted(
+                                            repository.owner().name(),
+                                            repository.name(),
+                                            err.getMessage()
+                                    ),
+                            DialogTitles.OPTION_PANE_ERROR_TITLE,
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .publishOn(SwingScheduler.edt())
+                .subscribe(metadata -> {
+                    tabbedPane.add("%s/%s Pull Requests".formatted(repository.owner().name(), repository.name()), pullRequestPanel);
+
+                    lblOwnerWithName.setText("%s/%s".formatted(repository.owner().name(), repository.name()));
+                    lblRepoStars.setText("%d stars".formatted(metadata.starCount()));
+                    metadata.license()
+                            .ifPresent(license -> lblLicense.setText("License: %s".formatted(license)));
+                    metadata.latestRelease()
+                            .ifPresent(latestRelease -> {
+                                final String latestReleaseDate = ZoneBasedDateTimeFormatter.toFormattedString(latestRelease.publishedAt());
+                                lblLastRelease.setText("Latest Release: %s released at %s".formatted(latestRelease.name(), latestReleaseDate));
+                            });
+                    lblPrimaryLanguage.setText("Primary Language: %s".formatted(repository.primaryLanguage()));
+
+                    setRepositoryLabelsVisible(true);
+                });
+
     }
 
 }
