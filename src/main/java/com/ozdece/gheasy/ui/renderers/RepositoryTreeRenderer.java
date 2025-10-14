@@ -33,6 +33,9 @@ public class RepositoryTreeRenderer implements TreeCellRenderer {
 
                 if (isBoldFont) {
                     label.setFont(Fonts.BOLD_FONT);
+                    label.revalidate();
+                    label.repaint();
+                    tree.setRowHeight(-1);
                 } else {
                     label.setFont(Fonts.DEFAULT_FONT);
                 }
@@ -49,6 +52,9 @@ public class RepositoryTreeRenderer implements TreeCellRenderer {
 
                 if (repositoryStats.pullRequestCount() > 0 || repositoryStats.issuesCount() > 0) {
                     label.setFont(Fonts.BOLD_FONT);
+                    label.revalidate();
+                    label.repaint();
+                    tree.setRowHeight(-1);
                 } else {
                     label.setFont(Fonts.DEFAULT_FONT);
                 }
@@ -67,7 +73,10 @@ public class RepositoryTreeRenderer implements TreeCellRenderer {
                 switch (leaf.getType()) {
                     case PULL_REQUEST: {
                         if (leaf.repositoryTreeNode().getRepositoryStats().pullRequestCount() > 0) {
-                           label.setFont(Fonts.BOLD_FONT);
+                            label.setFont(Fonts.BOLD_FONT);
+                            label.revalidate();
+                            label.repaint();
+                            tree.setRowHeight(-1);
                         } else {
                             label.setFont(Fonts.DEFAULT_FONT);
                         }
@@ -76,6 +85,9 @@ public class RepositoryTreeRenderer implements TreeCellRenderer {
                     case ISSUE: {
                         if (leaf.repositoryTreeNode().getRepositoryStats().issuesCount() > 0) {
                             label.setFont(Fonts.BOLD_FONT);
+                            label.revalidate();
+                            label.repaint();
+                            tree.setRowHeight(-1);
                         } else {
                             label.setFont(Fonts.DEFAULT_FONT);
                         }
