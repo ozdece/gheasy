@@ -9,7 +9,7 @@ import java.util.List;
 
 public class PullRequestsTableModel extends AbstractTableModel {
 
-    private final String[] COLUMNS = {"#", "Active", "Title", "Author", "Created At", "Labels", "Tasks", "Changed Files", "Diff"};
+    private final String[] COLUMNS = {"#", "Active", "Title", "Author", "Created At", "Labels", "Tasks", "Files", "Diff"};
 
     private final List<PullRequest> pullRequests;
 

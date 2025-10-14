@@ -58,6 +58,9 @@ public class PullRequestPanel extends JPanel implements TabPanel {
 
         lblPullRequestCount.setText(String.valueOf(repositoryStats.pullRequestCount()));
 
+        tblPullRequests.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        tblPullRequests.setRowHeight(tblPullRequests.getRowHeight() + 3);
+
         groupLayout.setHorizontalGroup(
                 groupLayout.createParallelGroup()
                         .addGroup(
@@ -138,7 +141,20 @@ public class PullRequestPanel extends JPanel implements TabPanel {
 
                     tblPullRequests.setModel(model);
                     tblPullRequests.setDefaultRenderer(Object.class, renderer);
+                    arrangeColumnSizes();
                 });
+    }
+
+    private void arrangeColumnSizes() {
+        tblPullRequests.getColumnModel().getColumn(0).setMinWidth(50);
+        tblPullRequests.getColumnModel().getColumn(1).setMinWidth(30);
+        tblPullRequests.getColumnModel().getColumn(2).setMinWidth(500);
+        tblPullRequests.getColumnModel().getColumn(3).setMinWidth(200);
+        tblPullRequests.getColumnModel().getColumn(4).setMinWidth(160);
+        tblPullRequests.getColumnModel().getColumn(5).setMinWidth(150);
+        tblPullRequests.getColumnModel().getColumn(6).setMinWidth(120);
+        tblPullRequests.getColumnModel().getColumn(7).setMinWidth(30);
+        tblPullRequests.getColumnModel().getColumn(8).setMinWidth(60);
     }
 
     @Override

@@ -1,22 +1,20 @@
 package com.ozdece.gheasy.ui.renderers;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.ozdece.gheasy.datetime.ZoneBasedDateTimeFormatter;
-import com.ozdece.gheasy.github.pullrequest.model.CheckRunState;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequest;
-import com.ozdece.gheasy.github.pullrequest.model.PullRequestLabel;
 import com.ozdece.gheasy.github.pullrequest.model.StatusCheckRollup;
 import com.ozdece.gheasy.ui.Fonts;
+import com.ozdece.gheasy.ui.components.JGithubLabel;
+import com.ozdece.gheasy.ui.components.JLabelsPanel;
+import com.ozdece.gheasy.ui.components.JPullRequestDiffPanel;
+import com.ozdece.gheasy.ui.components.JStatusCheckProgressBar;
 
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
-import java.util.stream.Collectors;
 
 public class PullRequestsTableCellRenderer implements TableCellRenderer {
 
@@ -50,27 +48,43 @@ public class PullRequestsTableCellRenderer implements TableCellRenderer {
 
                 return checkBox;
             }
-            case 6 -> {
-                final JProgressBar progressBar = new JProgressBar(0, 100);
-                progressBar.setOpaque(true);
-                progressBar.setBorderPainted(false);
-                progressBar.setStringPainted(true);
+            case 5 -> {
+                final ImmutableSet<JGithubLabel> labels = pullRequest.labels().stream()
+                        .map(pullRequestLabel -> new JGithubLabel(pullRequestLabel.name(), pullRequestLabel.hexColorCode()))
+                        .collect(ImmutableSet.toImmutableSet());
+                final JLabelsPanel labelsPanel = new JLabelsPanel(labels);
+                if (isSelected) {
+                    labelsPanel.setBackground(table.getSelectionBackground());
+                } else {
+                    labelsPanel.setBackground(table.getBackground());
+                }
 
+                return labelsPanel;
+            }
+            case 6 -> {
                 final long statusCheckCount = pullRequest.statusCheckRollup().size();
                 final long completedCheckCount = pullRequest.statusCheckRollup().stream()
                         .filter(StatusCheckRollup::isSuccessful)
                         .count();
-                final double perc = ((double) completedCheckCount / statusCheckCount) * 100;
 
-                progressBar.setValue((int)perc);
-                progressBar.setString("%d/%d tasks succeeded".formatted(completedCheckCount, statusCheckCount));
+                final JStatusCheckProgressBar progressBar = new JStatusCheckProgressBar(statusCheckCount, completedCheckCount);
 
-                progressBar.setForeground(new Color(46, 204, 113)); // A nice green
                 if (isSelected) {
                     progressBar.setBackground(table.getSelectionBackground());
                 }
 
                 return progressBar;
+            }
+            case 8 -> {
+                final JPullRequestDiffPanel diffPanel = new JPullRequestDiffPanel(pullRequest.additions(), pullRequest.deletions());
+
+                if (isSelected) {
+                    diffPanel.setBackground(table.getSelectionBackground());
+                } else {
+                    diffPanel.setBackground(table.getBackground());
+                }
+
+                return diffPanel;
             }
             default -> {
                 final JLabel label = (JLabel) defaultRenderer.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
@@ -90,22 +104,6 @@ public class PullRequestsTableCellRenderer implements TableCellRenderer {
                     case 4 -> {
                         final String text = ZoneBasedDateTimeFormatter.toFormattedString(pullRequest.createdAt());
                         label.setText(text);
-                    }
-                    case 5 -> {
-                        final String text = pullRequest.labels().stream()
-                                .map(PullRequestLabel::name)
-                                .collect(Collectors.joining(", "));
-
-                        label.setText(text);
-
-                        //TODO: Create a custom label panel
-                        //TODO: Create a utility for converting String hexColorCode to Color object
-                        final Border line = new LineBorder(Color.BLUE, 2, true);
-                        final Border padding = new EmptyBorder(10, 15, 10, 15);
-                        final Border roundedBorder = new CompoundBorder(line, padding);
-
-                        label.setBorder(roundedBorder);
-                        label.setBackground(Color.MAGENTA.darker());
                     }
                     case 7 -> label.setHorizontalAlignment(SwingConstants.RIGHT);
                 }
