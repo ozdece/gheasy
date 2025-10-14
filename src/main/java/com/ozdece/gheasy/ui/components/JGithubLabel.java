@@ -17,7 +17,7 @@ public class JGithubLabel extends JLabel {
                 .toOption()
                 .getOrElse(Color.GRAY);
 
-        final Border paddingBorder = new EmptyBorder(1, 1, 1, 1);
+        final Border paddingBorder = new EmptyBorder(2, 2, 2, 2);
 
         setBorder(paddingBorder);
         setBackground(backgroundColor);

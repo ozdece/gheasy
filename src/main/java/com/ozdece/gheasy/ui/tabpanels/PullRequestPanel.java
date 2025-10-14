@@ -1,19 +1,30 @@
 package com.ozdece.gheasy.ui.tabpanels;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.ozdece.gheasy.github.pullrequest.PullRequestService;
-import com.ozdece.gheasy.github.pullrequest.model.PullRequestStatus;
+import com.ozdece.gheasy.github.pullrequest.model.PullRequest;
+import com.ozdece.gheasy.github.pullrequest.model.PullRequestLabel;
+import com.ozdece.gheasy.github.pullrequest.model.PullRequestType;
 import com.ozdece.gheasy.github.repository.model.Repository;
 import com.ozdece.gheasy.github.repository.model.RepositoryStats;
 import com.ozdece.gheasy.ui.DialogTitles;
 import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.SwingScheduler;
+import com.ozdece.gheasy.ui.models.PullRequestLabelComboBoxModel;
 import com.ozdece.gheasy.ui.models.PullRequestsTableModel;
+import com.ozdece.gheasy.ui.renderers.PullRequestLabelListCellRenderer;
 import com.ozdece.gheasy.ui.renderers.PullRequestsTableCellRenderer;
+import com.ozdece.gheasy.web.URLBrowser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.scheduler.Schedulers;
 
 import javax.swing.*;
+
+import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
 
 public class PullRequestPanel extends JPanel implements TabPanel {
 
@@ -25,8 +36,8 @@ public class PullRequestPanel extends JPanel implements TabPanel {
 
     private final JTextField txtSearchPullRequest = new JTextField();
 
-    private final JComboBox<PullRequestStatus> cmbActivePassivePRs = new JComboBox<>();
-    private final JComboBox<String> cmbPullRequestLabels = new JComboBox<>();
+    private final JComboBox<PullRequestType> cmbActivePassivePRs = new JComboBox<>();
+    private final JComboBox<PullRequestLabel> cmbPullRequestLabels = new JComboBox<>();
 
     private final Repository repository;
     private final RepositoryStats repositoryStats;
@@ -49,7 +60,7 @@ public class PullRequestPanel extends JPanel implements TabPanel {
         final JLabel lblPullRequests = new JLabel("Pull Requests: ");
         final JButton btnViewAll = new JButton("View All on GitHub");
         final JLabel lblSearchPullRequest = new JLabel("Search: ");
-        final JLabel lblActivePassivePRs = new JLabel("Active/Completed PRs: ");
+        final JLabel lblActivePassivePRs = new JLabel("Active/Draft PRs: ");
         final JLabel lblPullRequestLabels = new JLabel("Labels: ");
         final JScrollPane spPullRequests = new JScrollPane(tblPullRequests);
 
@@ -60,6 +71,28 @@ public class PullRequestPanel extends JPanel implements TabPanel {
 
         tblPullRequests.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         tblPullRequests.setRowHeight(tblPullRequests.getRowHeight() + 3);
+
+        Arrays.stream(PullRequestType.values())
+                        .forEach(cmbActivePassivePRs::addItem);
+
+        cmbActivePassivePRs.setSelectedIndex(-1);
+
+        btnViewAll.addActionListener(e -> {
+            final String url = "%s/pulls".formatted(repository.url());
+            final URI uri = URI.create(url);
+            URLBrowser.browse(uri)
+                    .doOnError(err -> {
+                        logger.error("An error occurred while opening the URL {}", url, err);
+                        JOptionPane.showMessageDialog(
+                                null,
+                                "An error occurred while opening the URL %s\n%s".formatted(url, err.getMessage()),
+                                DialogTitles.OPTION_PANE_ERROR_TITLE,
+                                JOptionPane.ERROR_MESSAGE
+                        );
+                    })
+                    .subscribeOn(Schedulers.parallel())
+                    .subscribe();
+        });
 
         groupLayout.setHorizontalGroup(
                 groupLayout.createParallelGroup()
@@ -141,8 +174,23 @@ public class PullRequestPanel extends JPanel implements TabPanel {
 
                     tblPullRequests.setModel(model);
                     tblPullRequests.setDefaultRenderer(Object.class, renderer);
+
+                    setupPullRequestLabelComboBox(pullRequests);
+
                     arrangeColumnSizes();
                 });
+    }
+
+    private void setupPullRequestLabelComboBox(ImmutableList<PullRequest> pullRequests) {
+       final ImmutableSet<PullRequestLabel> labels = pullRequests.stream()
+               .map(PullRequest::labels)
+               .filter(lbls -> !lbls.isEmpty())
+               .flatMap(Collection::stream)
+               .collect(ImmutableSet.toImmutableSet());
+
+       final PullRequestLabelComboBoxModel model = new PullRequestLabelComboBoxModel(labels);
+       cmbPullRequestLabels.setModel(model);
+       cmbPullRequestLabels.setRenderer(new PullRequestLabelListCellRenderer());
     }
 
     private void arrangeColumnSizes() {

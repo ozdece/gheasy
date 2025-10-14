@@ -348,6 +348,9 @@ public class FrmMainDashboard extends JFrame {
                     tabbedPane.add("%s/%s Pull Requests".formatted(repository.owner().name(), repository.name()), pullRequestPanel);
 
                     lblOwnerWithName.setText("%s/%s".formatted(repository.owner().name(), repository.name()));
+                    imageService.getImageFile("%s.png".formatted(repository.owner().name()))
+                                    .ifPresent(imageFile -> lblOwnerWithName.setIcon(new ImageIcon(imageFile.getAbsolutePath())));
+
                     lblRepoStars.setText("%d stars".formatted(metadata.starCount()));
                     metadata.license()
                             .ifPresent(license -> lblLicense.setText("License: %s".formatted(license)));
@@ -359,6 +362,15 @@ public class FrmMainDashboard extends JFrame {
                     lblPrimaryLanguage.setText("Primary Language: %s".formatted(repository.primaryLanguage()));
 
                     setRepositoryLabelsVisible(true);
+
+                    if (metadata.latestRelease().isEmpty()) {
+                        lblLastRelease.setVisible(false);
+                    }
+
+                    if (metadata.license().isEmpty()) {
+                        lblLicense.setVisible(false);
+                    }
+
                 });
 
     }
