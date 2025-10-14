@@ -23,4 +23,10 @@ public class JGithubLabel extends JLabel {
         setBackground(backgroundColor);
         setOpaque(true);
     }
+
+    public JGithubLabel(String text) {
+        super(text);
+        setOpaque(true);
+    }
+
 }

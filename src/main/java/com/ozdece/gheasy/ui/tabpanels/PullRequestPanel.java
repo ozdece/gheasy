@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableSet;
 import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequest;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequestLabel;
-import com.ozdece.gheasy.github.pullrequest.model.PullRequestType;
+import com.ozdece.gheasy.ui.models.state.PullRequestActiveStatus;
 import com.ozdece.gheasy.github.repository.model.Repository;
 import com.ozdece.gheasy.github.repository.model.RepositoryStats;
 import com.ozdece.gheasy.ui.DialogTitles;
@@ -28,7 +28,6 @@ import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 
 import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
@@ -44,7 +43,7 @@ public class PullRequestPanel extends JPanel implements TabPanel {
 
     private final JTextField txtSearchPullRequest = new JTextField();
 
-    private final JComboBox<PullRequestType> cmbActivePassivePRs = new JComboBox<>();
+    private final JComboBox<PullRequestActiveStatus> cmbActivePassivePRs = new JComboBox<>();
     private final JComboBox<PullRequestLabel> cmbPullRequestLabels = new JComboBox<>();
 
     private final Repository repository;
@@ -82,11 +81,13 @@ public class PullRequestPanel extends JPanel implements TabPanel {
         tblPullRequests.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         tblPullRequests.setRowHeight(tblPullRequests.getRowHeight() + 3);
 
-        Arrays.stream(PullRequestType.values())
+        Arrays.stream(PullRequestActiveStatus.values())
                         .forEach(cmbActivePassivePRs::addItem);
 
-        cmbActivePassivePRs.setSelectedIndex(-1);
+        cmbActivePassivePRs.setSelectedIndex(0);
+
         cmbActivePassivePRs.addItemListener(this::onActivePassivePRItemSelected);
+        cmbPullRequestLabels.addItemListener(this::onPRLabelItemSelected);
 
         btnViewAll.addActionListener(e -> {
             final String url = "%s/pulls".formatted(repository.url());
@@ -200,14 +201,20 @@ public class PullRequestPanel extends JPanel implements TabPanel {
     }
 
     private void setupPullRequestLabelComboBox(ImmutableList<PullRequest> pullRequests) {
-       final ImmutableSet<PullRequestLabel> labels = pullRequests.stream()
+       final ImmutableSet<PullRequestLabel> pullRequestLabels = pullRequests.stream()
                .map(PullRequest::labels)
                .filter(lbls -> !lbls.isEmpty())
                .flatMap(Collection::stream)
                .collect(ImmutableSet.toImmutableSet());
 
+       final ImmutableSet<PullRequestLabel> labels = ImmutableSet.<PullRequestLabel>builder()
+                .add(new PullRequestLabel("all", "All", "#000000"))
+               .addAll(pullRequestLabels)
+               .build();
+
        final PullRequestLabelComboBoxModel model = new PullRequestLabelComboBoxModel(labels);
        cmbPullRequestLabels.setModel(model);
+       cmbPullRequestLabels.setSelectedIndex(0);
        cmbPullRequestLabels.setRenderer(new PullRequestLabelListCellRenderer());
     }
 
@@ -217,14 +224,23 @@ public class PullRequestPanel extends JPanel implements TabPanel {
         final RowFilter<TableModel, Integer> searchRowFilter = BasicRowFilters.caseInsensitiveRegexFilter(searchText);
         final RowFilter<TableModel, Integer> activeDraftPRFilter = cmbActivePassivePRs.getSelectedIndex() == -1
                 ? RowFilter.regexFilter("")
-                : switch ((PullRequestType) cmbActivePassivePRs.getSelectedItem()) {
+                : switch ((PullRequestActiveStatus) cmbActivePassivePRs.getSelectedItem()) {
+            case ALL -> RowFilter.regexFilter("");
             case ACTIVE -> new BooleanRowFilter(true, 1);
             case DRAFT -> new BooleanRowFilter(false, 1);
+        };
+        final RowFilter<TableModel, Integer> prLabelFilter = cmbPullRequestLabels.getSelectedIndex() == -1
+                ? RowFilter.regexFilter("")
+                : switch ((PullRequestLabel) cmbPullRequestLabels.getSelectedItem()) {
+            case PullRequestLabel allLabel when allLabel.id().equals("all") -> RowFilter.regexFilter("");
+            case PullRequestLabel prl -> RowFilter.regexFilter(prl.name(), 6);
         };
 
         maybeRowSorter.ifPresent(rowSorter ->
                 rowSorter
-                        .setRowFilter(RowFilter.andFilter(ImmutableSet.of(searchRowFilter, activeDraftPRFilter)))
+                        .setRowFilter(RowFilter.andFilter(
+                                ImmutableSet.of(searchRowFilter, activeDraftPRFilter, prLabelFilter))
+                        )
         );
     }
 
@@ -246,6 +262,10 @@ public class PullRequestPanel extends JPanel implements TabPanel {
     }
 
     private void onActivePassivePRItemSelected(ItemEvent e) {
+        triggerRowFiltering();
+    }
+
+    private void onPRLabelItemSelected(ItemEvent e) {
         triggerRowFiltering();
     }
 

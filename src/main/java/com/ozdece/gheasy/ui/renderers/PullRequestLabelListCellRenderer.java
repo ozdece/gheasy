@@ -13,6 +13,6 @@ public class PullRequestLabelListCellRenderer implements ListCellRenderer<PullRe
     public Component getListCellRendererComponent(JList<? extends PullRequestLabel> list, PullRequestLabel value, int index, boolean isSelected, boolean cellHasFocus) {
         return Optional.ofNullable(value)
                 .map(label -> new JGithubLabel(value.name(), value.hexColorCode()))
-                .orElse(new JGithubLabel("", "#000000"));
+                .orElse(new JGithubLabel(""));
     }
 }
