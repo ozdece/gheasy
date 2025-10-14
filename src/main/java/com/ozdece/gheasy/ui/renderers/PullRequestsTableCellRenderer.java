@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.ozdece.gheasy.datetime.ZoneBasedDateTimeFormatter;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequest;
-import com.ozdece.gheasy.github.pullrequest.model.StatusCheckRollup;
 import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.components.JGithubLabel;
 import com.ozdece.gheasy.ui.components.JLabelsPanel;
@@ -48,7 +47,7 @@ public class PullRequestsTableCellRenderer implements TableCellRenderer {
 
                 return checkBox;
             }
-            case 5 -> {
+            case 6 -> {
                 final ImmutableSet<JGithubLabel> labels = pullRequest.labels().stream()
                         .map(pullRequestLabel -> new JGithubLabel(pullRequestLabel.name(), pullRequestLabel.hexColorCode()))
                         .collect(ImmutableSet.toImmutableSet());
@@ -61,13 +60,8 @@ public class PullRequestsTableCellRenderer implements TableCellRenderer {
 
                 return labelsPanel;
             }
-            case 6 -> {
-                final long statusCheckCount = pullRequest.statusCheckRollup().size();
-                final long completedCheckCount = pullRequest.statusCheckRollup().stream()
-                        .filter(StatusCheckRollup::isSuccessful)
-                        .count();
-
-                final JStatusCheckProgressBar progressBar = new JStatusCheckProgressBar(statusCheckCount, completedCheckCount);
+            case 7 -> {
+                final JStatusCheckProgressBar progressBar = new JStatusCheckProgressBar(pullRequest.statusCheckRollup());
 
                 if (isSelected) {
                     progressBar.setBackground(table.getSelectionBackground());
@@ -75,7 +69,7 @@ public class PullRequestsTableCellRenderer implements TableCellRenderer {
 
                 return progressBar;
             }
-            case 8 -> {
+            case 9 -> {
                 final JPullRequestDiffPanel diffPanel = new JPullRequestDiffPanel(pullRequest.additions(), pullRequest.deletions());
 
                 if (isSelected) {
@@ -105,7 +99,13 @@ public class PullRequestsTableCellRenderer implements TableCellRenderer {
                         final String text = ZoneBasedDateTimeFormatter.toFormattedString(pullRequest.createdAt());
                         label.setText(text);
                     }
-                    case 7 -> label.setHorizontalAlignment(SwingConstants.RIGHT);
+                    case 5 -> {
+                        final String text = pullRequest.updatedAt()
+                                .map(ZoneBasedDateTimeFormatter::toFormattedString)
+                                .orElse("");
+                        label.setText(text);
+                    }
+                    case 8 -> label.setHorizontalAlignment(SwingConstants.RIGHT);
                 }
 
                 return label;

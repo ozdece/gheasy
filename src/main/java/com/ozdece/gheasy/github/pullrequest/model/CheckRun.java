@@ -6,7 +6,8 @@ public record CheckRun(
         @JsonProperty("conclusion")
         CheckRunState checkRunState,
         @JsonProperty("status")
-        CheckStatusState checkStatusState
+        CheckStatusState checkStatusState,
+        String name
 ) implements StatusCheckRollup {
     @Override
     public boolean isSuccessful() {

@@ -234,10 +234,11 @@ public class PullRequestPanel extends JPanel implements TabPanel {
         tblPullRequests.getColumnModel().getColumn(2).setMinWidth(500);
         tblPullRequests.getColumnModel().getColumn(3).setMinWidth(200);
         tblPullRequests.getColumnModel().getColumn(4).setMinWidth(160);
-        tblPullRequests.getColumnModel().getColumn(5).setMinWidth(150);
-        tblPullRequests.getColumnModel().getColumn(6).setMinWidth(120);
-        tblPullRequests.getColumnModel().getColumn(7).setMinWidth(30);
-        tblPullRequests.getColumnModel().getColumn(8).setMinWidth(60);
+        tblPullRequests.getColumnModel().getColumn(5).setMinWidth(160);
+        tblPullRequests.getColumnModel().getColumn(6).setMinWidth(150);
+        tblPullRequests.getColumnModel().getColumn(7).setMinWidth(120);
+        tblPullRequests.getColumnModel().getColumn(8).setMinWidth(30);
+        tblPullRequests.getColumnModel().getColumn(9).setMinWidth(60);
     }
 
     private void onSearchTextUpdated(CaretEvent e) {

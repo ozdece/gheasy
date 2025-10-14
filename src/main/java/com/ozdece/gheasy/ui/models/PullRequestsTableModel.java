@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 
 public class PullRequestsTableModel extends AbstractTableModel {
 
-    private final String[] COLUMNS = {"#", "Active", "Title", "Author", "Created At", "Labels", "Tasks", "Files", "Diff"};
+    private final String[] COLUMNS = {"#", "Active", "Title", "Author", "Created At", "Updated At", "Labels", "Tasks", "Files", "Diff"};
 
     private final List<PullRequest> pullRequests;
 
@@ -46,11 +46,12 @@ public class PullRequestsTableModel extends AbstractTableModel {
             case 2: return pullRequest.title();
             case 3: return getAuthorText(pullRequest.author());
             case 4: return pullRequest.createdAt();
-            case 5: return getLabelsText(pullRequest.labels());
-            case 6: return pullRequest.statusCheckRollup();
-            case 7: return pullRequest.changedFiles();
+            case 5: return pullRequest.updatedAt();
+            case 6: return getLabelsText(pullRequest.labels());
+            case 7: return pullRequest.statusCheckRollup();
+            case 8: return pullRequest.changedFiles();
             // We render diff in renderer
-            case 8: return "";
+            case 9: return "";
             default: return null;
         }
     }
