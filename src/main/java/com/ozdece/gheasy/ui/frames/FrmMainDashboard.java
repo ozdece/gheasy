@@ -7,12 +7,12 @@ import com.ozdece.gheasy.github.auth.model.GithubUser;
 import com.ozdece.gheasy.github.pullrequest.PullRequestService;
 import com.ozdece.gheasy.github.repository.RepositoryService;
 import com.ozdece.gheasy.github.repository.model.Repository;
-import com.ozdece.gheasy.github.repository.model.RepositoryStats;
 import com.ozdece.gheasy.image.ImageService;
 import com.ozdece.gheasy.ui.DialogTitles;
 import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.ResourceLoader;
 import com.ozdece.gheasy.ui.SwingScheduler;
+import com.ozdece.gheasy.ui.components.JTabbedPaneClosableTab;
 import com.ozdece.gheasy.ui.models.RepositoryTreeModel;
 import com.ozdece.gheasy.ui.models.tree.GithubRepositoryTreeNode;
 import com.ozdece.gheasy.ui.models.tree.RepositoryTreeNodeLeaf;
@@ -28,10 +28,12 @@ import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.io.File;
 import java.util.Optional;
 
 import static io.vavr.API.Tuple;
@@ -60,6 +62,7 @@ public class FrmMainDashboard extends JFrame {
 
     private static final Logger logger = LoggerFactory.getLogger(FrmMainDashboard.class);
 
+    private boolean newTabCreated = false;
 
     public FrmMainDashboard(
             GithubUser githubUser,
@@ -101,6 +104,7 @@ public class FrmMainDashboard extends JFrame {
                 .orElse(githubUser.username());
 
         tabbedPane.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        tabbedPane.addChangeListener(this::onTabChanged);
 
         lblOwnerWithName.setFont(Fonts.boldFontWithSize(20));
 
@@ -217,6 +221,21 @@ public class FrmMainDashboard extends JFrame {
         return centralPanel;
     }
 
+    private void onTabChanged(ChangeEvent e) {
+        if (tabbedPane.getSelectedIndex() == -1) {
+            return;
+        }
+
+        if (newTabCreated) {
+            newTabCreated = false;
+            return;
+        }
+        final JTabbedPane tp = (JTabbedPane) e.getSource();
+
+        final RepositoryTabPanel repositoryTabPanel = (RepositoryTabPanel) tp.getSelectedComponent();
+        loadTab(repositoryTabPanel);
+    }
+
     private void setRepositoryLabelsVisible(boolean visible) {
         lblPrimaryLanguage.setVisible(visible);
         lblOwnerWithName.setVisible(visible);
@@ -316,28 +335,21 @@ public class FrmMainDashboard extends JFrame {
     }
 
     private void loadTab(GithubRepositoryTreeNode node) {
-       switch (node) {
-           case RepositoryTreeNodeLeaf leaf
-                   when leaf.getType() == RepositoryTreeNodeType.PULL_REQUEST -> loadRepositoryPullRequestsTab(leaf);
-           default -> {}
-       }
+        switch (node) {
+            case RepositoryTreeNodeLeaf leaf
+                    when leaf.getType() == RepositoryTreeNodeType.PULL_REQUEST -> loadRepositoryPullRequestsTab(leaf.repositoryTreeNode().getGithubRepository());
+            default -> {}
+        }
     }
 
-    private void loadRepositoryPullRequestsTab(RepositoryTreeNodeLeaf leaf) {
-        final RepositoryStats repositoryStats = leaf.repositoryTreeNode().getRepositoryStats();
-        final Repository repository = leaf.repositoryTreeNode().getGithubRepository();
-
-        final Optional<PullRequestPanel> maybeOpenTab = getExistingPullRequestPanel(repository);
-
-        if (maybeOpenTab.isPresent()) {
-            final PullRequestPanel pullRequestPanel = maybeOpenTab.get();
-
-            tabbedPane.setSelectedComponent(pullRequestPanel);
-            return;
+    private void loadTab(RepositoryTabPanel tabPanel) {
+        switch (tabPanel.panelType()) {
+            case PULL_REQUEST -> loadRepositoryPullRequestsTab(tabPanel.getRepository());
+            default -> {}
         }
+    }
 
-        final PullRequestPanel pullRequestPanel = new PullRequestPanel(pullRequestService, repository, repositoryStats);
-
+    private void loadRepositoryPullRequestsTab(Repository repository) {
         repositoryService.getRepositoryMetadata(repository)
                 .doOnError(err -> {
                     logger.error("Unable to retrieve repository metadata for the repository {}", repository.name(), err);
@@ -356,12 +368,32 @@ public class FrmMainDashboard extends JFrame {
                 .subscribeOn(Schedulers.boundedElastic())
                 .publishOn(SwingScheduler.edt())
                 .subscribe(metadata -> {
-                    tabbedPane.add("%s/%s Pull Requests".formatted(repository.owner().name(), repository.name()), pullRequestPanel);
+                    final Optional<PullRequestPanel> maybeOpenTab = getExistingPullRequestPanel(repository);
+                    final PullRequestPanel pullRequestPanel;
+                    final String iconFileName = "%s.png".formatted(repository.owner().name());
+                    
+                    if (maybeOpenTab.isPresent()) {
+                        pullRequestPanel = maybeOpenTab.get();
+                    } else {
+                        pullRequestPanel = new PullRequestPanel(pullRequestService, repository);
+                        newTabCreated = true;
+
+                        final Optional<File> maybeIcon = imageService.getImageFile(iconFileName);
+
+                        tabbedPane.add(pullRequestPanel);
+                        final int tabIndex = tabbedPane.getTabCount() - 1;
+                        tabbedPane.setTabComponentAt(tabIndex, new JTabbedPaneClosableTab(
+                                tabbedPane,
+                                "%s/%s Pull Requests".formatted(repository.owner().name(), repository.name()),
+                                maybeIcon
+                        ));
+                    }
+
                     tabbedPane.setSelectedComponent(pullRequestPanel);
 
                     lblOwnerWithName.setText("%s/%s".formatted(repository.owner().name(), repository.name()));
-                    imageService.getImageFile("%s.png".formatted(repository.owner().name()))
-                                    .ifPresent(imageFile -> lblOwnerWithName.setIcon(new ImageIcon(imageFile.getAbsolutePath())));
+                    imageService.getImageFile(iconFileName)
+                            .ifPresent(imageFile -> lblOwnerWithName.setIcon(new ImageIcon(imageFile.getAbsolutePath())));
 
                     lblRepoStars.setText("%d stars".formatted(metadata.starCount()));
                     metadata.license()
@@ -394,7 +426,7 @@ public class FrmMainDashboard extends JFrame {
             final Component tabComponent = tabbedPane.getComponentAt(i);
             final RepositoryTabPanel repositoryTabPanel = (RepositoryTabPanel) tabComponent;
 
-            if (repositoryTabPanel.panelType() == TabPanelType.PULL_REQUEST && repositoryTabPanel.repositoryId().equals(repository.id())) {
+            if (repositoryTabPanel.panelType() == TabPanelType.PULL_REQUEST && repositoryTabPanel.getRepository().id().equals(repository.id())) {
                 return Optional.of((PullRequestPanel) tabComponent);
             }
         }

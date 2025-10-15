@@ -7,7 +7,6 @@ import com.ozdece.gheasy.github.pullrequest.model.PullRequest;
 import com.ozdece.gheasy.github.pullrequest.model.PullRequestLabel;
 import com.ozdece.gheasy.ui.models.state.PullRequestActiveStatus;
 import com.ozdece.gheasy.github.repository.model.Repository;
-import com.ozdece.gheasy.github.repository.model.RepositoryStats;
 import com.ozdece.gheasy.ui.DialogTitles;
 import com.ozdece.gheasy.ui.Fonts;
 import com.ozdece.gheasy.ui.SwingScheduler;
@@ -47,19 +46,17 @@ public class PullRequestPanel extends JPanel implements RepositoryTabPanel {
     private final JComboBox<PullRequestLabel> cmbPullRequestLabels = new JComboBox<>();
 
     private final Repository repository;
-    private final RepositoryStats repositoryStats;
 
     private Optional<TableRowSorter<PullRequestsTableModel>> maybeRowSorter = Optional.empty();
 
     private static final Logger logger = LoggerFactory.getLogger(PullRequestPanel.class);
 
-    public PullRequestPanel(PullRequestService pullRequestService, Repository repository, RepositoryStats repositoryStats) {
+    public PullRequestPanel(PullRequestService pullRequestService, Repository repository) {
         this.pullRequestService = pullRequestService;
         this.repository = repository;
-        this.repositoryStats = repositoryStats;
 
         setupPanel();
-        loadPullRequests();
+        updatePanel();
     }
 
     private void setupPanel() {
@@ -75,8 +72,6 @@ public class PullRequestPanel extends JPanel implements RepositoryTabPanel {
 
         lblPullRequests.setFont(Fonts.withSize(14));
         lblPullRequestCount.setFont(Fonts.withSize(14));
-
-        lblPullRequestCount.setText(String.valueOf(repositoryStats.pullRequestCount()));
 
         tblPullRequests.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         tblPullRequests.setRowHeight(tblPullRequests.getRowHeight() + 6);
@@ -194,6 +189,7 @@ public class PullRequestPanel extends JPanel implements RepositoryTabPanel {
                     maybeRowSorter = Optional.of(rowSorter);
                     tblPullRequests.setRowSorter(rowSorter);
 
+                    lblPullRequestCount.setText(String.valueOf(pullRequests.size()));
                     setupPullRequestLabelComboBox(pullRequests);
 
                     arrangeColumnSizes();
@@ -270,12 +266,17 @@ public class PullRequestPanel extends JPanel implements RepositoryTabPanel {
     }
 
     @Override
-    public String repositoryId() {
-        return repository.id();
+    public Repository getRepository() {
+        return repository;
     }
 
     @Override
     public TabPanelType panelType() {
         return TabPanelType.PULL_REQUEST;
+    }
+
+    @Override
+    public void updatePanel() {
+        loadPullRequests();
     }
 }
