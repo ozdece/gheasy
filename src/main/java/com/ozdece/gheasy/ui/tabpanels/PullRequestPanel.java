@@ -33,7 +33,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
 
-public class PullRequestPanel extends JPanel implements TabPanel {
+public class PullRequestPanel extends JPanel implements RepositoryTabPanel {
 
     private final PullRequestService pullRequestService;
 
@@ -79,7 +79,7 @@ public class PullRequestPanel extends JPanel implements TabPanel {
         lblPullRequestCount.setText(String.valueOf(repositoryStats.pullRequestCount()));
 
         tblPullRequests.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        tblPullRequests.setRowHeight(tblPullRequests.getRowHeight() + 3);
+        tblPullRequests.setRowHeight(tblPullRequests.getRowHeight() + 6);
 
         Arrays.stream(PullRequestActiveStatus.values())
                         .forEach(cmbActivePassivePRs::addItem);
@@ -270,7 +270,12 @@ public class PullRequestPanel extends JPanel implements TabPanel {
     }
 
     @Override
-    public String getTabId() {
-        return "PullRequests-%s".formatted(repository.id());
+    public String repositoryId() {
+        return repository.id();
+    }
+
+    @Override
+    public TabPanelType panelType() {
+        return TabPanelType.PULL_REQUEST;
     }
 }

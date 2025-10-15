@@ -19,8 +19,11 @@ public class JGithubLabel extends JLabel {
 
         final Border paddingBorder = new EmptyBorder(2, 2, 2, 2);
 
+        final double luminance = (0.299 * backgroundColor.getRed() + 0.587 * backgroundColor.getGreen() + 0.114 * backgroundColor.getBlue()) / 255;
+
         setBorder(paddingBorder);
         setBackground(backgroundColor);
+        setForeground(luminance > 0.5 ? Color.BLACK : Color.WHITE);
         setOpaque(true);
     }
 

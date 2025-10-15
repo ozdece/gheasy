@@ -1,5 +1,7 @@
 package com.ozdece.gheasy.github.pullrequest.model;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
+
 public enum CheckRunState {
     ACTION_REQUIRED,
     CANCELLED,
@@ -14,5 +16,7 @@ public enum CheckRunState {
     STARTUP_FAILURE,
     SUCCESS,
     TIMED_OUT,
-    WAITING
+    WAITING,
+    @JsonEnumDefaultValue
+    UNKNOWN
 }

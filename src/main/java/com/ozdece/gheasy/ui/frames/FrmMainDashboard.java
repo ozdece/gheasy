@@ -19,6 +19,8 @@ import com.ozdece.gheasy.ui.models.tree.RepositoryTreeNodeLeaf;
 import com.ozdece.gheasy.ui.models.tree.RepositoryTreeNodeType;
 import com.ozdece.gheasy.ui.tabpanels.PullRequestPanel;
 import com.ozdece.gheasy.ui.renderers.RepositoryTreeRenderer;
+import com.ozdece.gheasy.ui.tabpanels.RepositoryTabPanel;
+import com.ozdece.gheasy.ui.tabpanels.TabPanelType;
 import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -325,6 +327,15 @@ public class FrmMainDashboard extends JFrame {
         final RepositoryStats repositoryStats = leaf.repositoryTreeNode().getRepositoryStats();
         final Repository repository = leaf.repositoryTreeNode().getGithubRepository();
 
+        final Optional<PullRequestPanel> maybeOpenTab = getExistingPullRequestPanel(repository);
+
+        if (maybeOpenTab.isPresent()) {
+            final PullRequestPanel pullRequestPanel = maybeOpenTab.get();
+
+            tabbedPane.setSelectedComponent(pullRequestPanel);
+            return;
+        }
+
         final PullRequestPanel pullRequestPanel = new PullRequestPanel(pullRequestService, repository, repositoryStats);
 
         repositoryService.getRepositoryMetadata(repository)
@@ -346,6 +357,7 @@ public class FrmMainDashboard extends JFrame {
                 .publishOn(SwingScheduler.edt())
                 .subscribe(metadata -> {
                     tabbedPane.add("%s/%s Pull Requests".formatted(repository.owner().name(), repository.name()), pullRequestPanel);
+                    tabbedPane.setSelectedComponent(pullRequestPanel);
 
                     lblOwnerWithName.setText("%s/%s".formatted(repository.owner().name(), repository.name()));
                     imageService.getImageFile("%s.png".formatted(repository.owner().name()))
@@ -373,6 +385,21 @@ public class FrmMainDashboard extends JFrame {
 
                 });
 
+    }
+
+    private Optional<PullRequestPanel> getExistingPullRequestPanel(Repository repository) {
+        final int tabCount = tabbedPane.getTabCount();
+
+        for (int i = 0 ; i < tabCount ; i++) {
+            final Component tabComponent = tabbedPane.getComponentAt(i);
+            final RepositoryTabPanel repositoryTabPanel = (RepositoryTabPanel) tabComponent;
+
+            if (repositoryTabPanel.panelType() == TabPanelType.PULL_REQUEST && repositoryTabPanel.repositoryId().equals(repository.id())) {
+                return Optional.of((PullRequestPanel) tabComponent);
+            }
+        }
+
+        return Optional.empty();
     }
 
 }
