@@ -371,7 +371,7 @@ public class FrmMainDashboard extends JFrame {
                     final Optional<PullRequestPanel> maybeOpenTab = getExistingPullRequestPanel(repository);
                     final PullRequestPanel pullRequestPanel;
                     final String iconFileName = "%s.png".formatted(repository.owner().name());
-                    
+
                     if (maybeOpenTab.isPresent()) {
                         pullRequestPanel = maybeOpenTab.get();
                     } else {

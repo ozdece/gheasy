@@ -11,6 +11,6 @@ public record CheckRun(
 ) implements StatusCheckRollup {
     @Override
     public boolean isSuccessful() {
-        return checkRunState == CheckRunState.SUCCESS;
+        return checkRunState == CheckRunState.SUCCESS || checkRunState == CheckRunState.SKIPPED;
     }
 }
